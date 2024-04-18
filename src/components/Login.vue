@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useShowLoginStore } from "@/stores/useShowLoginStore.ts";
 import { FormInstance, FormRules } from "element-plus";

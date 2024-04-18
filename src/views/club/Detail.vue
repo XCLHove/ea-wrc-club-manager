@@ -16,7 +16,6 @@ import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
 import { useWindowSize } from "@vueuse/core";
-import { elPrompt } from "@/utils/elPrompt.ts";
 import { TimeTrialEntry } from "@/interfaces/TimeTrialStageLeaderboard.ts";
 
 const tableHeight = (() => {
