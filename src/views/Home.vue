@@ -11,7 +11,7 @@ const getMarkdownText = () => {
   if (!markdown.value) return;
   axios.get(resolvePath("readme.md")).then(({ data }) => {
     Vditor.preview(markdown.value, data, {
-      cdn: "/cdn/vditor",
+      cdn: resolvePath("cdn/vditor"),
       mode: "dark",
     });
   });
