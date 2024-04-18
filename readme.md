@@ -23,7 +23,7 @@
 
 ## 仓库地址
 
-- GitHub: [EA WRC Club Manager](https://github.xclhove.top/XCLHove/ea-wrc-club-manager/release)
+- GitHub: [EA WRC Club Manager](https://github.xclhove.top/XCLHove/ea-wrc-club-manager)
    ```
    https://github.xclhove.top/XCLHove/ea-wrc-club-manager
    ```
