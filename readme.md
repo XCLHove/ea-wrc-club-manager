@@ -10,6 +10,12 @@
 
 基于[Electron-vite](https://electron-vite.github.io)构建的桌面应用。
 
+## 下载地址
+
+- [github(镜像站)](https://github.xclhove.top/XCLHove/ea-wrc-club-manager/releases)
+- [github](https://github.com/XCLHove/ea-wrc-club-manager/releases)
+- `gitee`不允许上传超过100MB的文件。
+
 ## 功能
 
 * [X] 创建俱乐部
