@@ -1,4 +1,6 @@
 import { clubRoutes } from "@/router/clubRoutes.ts";
+import Detail from "@/views/Detail.vue";
+import TimeTrial from "@/views/TimeTrial.vue";
 
 export const indexRoutes = [
   {
@@ -7,11 +9,11 @@ export const indexRoutes = [
   },
   {
     path: "/detail",
-    component: () => import("@/views/Detail.vue"),
+    component: Detail,
   },
   {
     path: "/time-trial",
-    component: () => import("@/views/TimeTrial.vue"),
+    component: TimeTrial,
   },
   clubRoutes,
 ];
