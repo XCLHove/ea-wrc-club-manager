@@ -59,17 +59,13 @@ const params = ref<Parameters<typeof timeTrialLeaderBoard>[0]>({
   surfaceConditionID: "",
   vehicleClassID: "",
   platform: Platform.CROSS_PLATFORM,
-  cursor: null,
+  cursor: undefined,
   focusOnMe: false,
   maxResultCount: 20,
 });
-watch(
-  () => params.value,
-  (n, o) => {
-    console.log(n, o);
-    getLeaderboard();
-  },
-);
+watch(params.value, () => {
+  getLeaderboard();
+});
 const getLeaderboard = () => {
   loading.value = true;
 
@@ -99,12 +95,6 @@ const page = ref({
   current: 1,
   total: 0,
 });
-watch(
-  () => leaderboard.value,
-  () => {
-    page.value.total = leaderboard.value?.totalEntrantCount;
-  },
-);
 watch(
   () => page.value.current,
   (newValue, oldValue) => {
