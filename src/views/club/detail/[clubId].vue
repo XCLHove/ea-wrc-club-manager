@@ -17,6 +17,7 @@ import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
 import { useWindowSize } from "@vueuse/core";
 import { TimeTrialEntry } from "@/interfaces/TimeTrialStageLeaderboard.ts";
+import { i18nUtil } from "@/utils/i18n.ts";
 
 const tableHeight = (() => {
   const { height } = useWindowSize();
@@ -260,7 +261,7 @@ const saveTotalTimeLeaderboard = (() => {
           v-for="stand in stands"
           :value="stand.id"
           :disabled="stand.id === currentStandID"
-          :label="`${stand.eventSettings.location}(${StandStatusMap[stand.status]})`"
+          :label="`${i18nUtil('wrc.location', stand.eventSettings.location)}(${StandStatusMap[stand.status]})`"
         >
           <div @click="changeStand(stand)">
             <el-text
@@ -268,7 +269,7 @@ const saveTotalTimeLeaderboard = (() => {
               v-if="stand.status === StandStatus.FINISHED"
             >
               {{
-                `${stand.eventSettings.location}(${StandStatusMap[stand.status]})`
+                `${i18nUtil("wrc.location", stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
               }}
             </el-text>
             <el-text
@@ -276,12 +277,12 @@ const saveTotalTimeLeaderboard = (() => {
               v-else-if="stand.status === StandStatus.RUNNING"
             >
               {{
-                `${showStand(stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
+                `${i18nUtil("wrc.location", stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
               }}
             </el-text>
             <el-text type="info" v-else>
               {{
-                `${showStand(stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
+                `${i18nUtil("wrc.location", stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
               }}
             </el-text>
           </div>
