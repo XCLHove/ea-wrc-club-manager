@@ -100,25 +100,38 @@ const tableHeight = (() => {
       :height="tableHeight"
       v-loading="loading"
     >
-      <el-table-column prop="clubName" label="俱乐部名称" fixed="left">
+      <el-table-column
+        prop="clubName"
+        label="俱乐部名称"
+        width="130"
+        fixed="left"
+      >
         <template #default="scope">
           <router-link
             class="link-to-club"
             :to="`/club/detail/${scope.row.clubID}`"
           >
-            <el-text type="info">{{ scope.row.clubName }}</el-text>
+            <el-text class="nowrap-hidden" type="info">{{
+              scope.row.clubName
+            }}</el-text>
           </router-link>
         </template>
       </el-table-column>
-      <el-table-column prop="ownerDisplayName" label="所属" />
-      <el-table-column prop="platfom" label="平台">
+      <el-table-column prop="ownerDisplayName" label="所属" width="100">
+        <template #default="scope">
+          <el-text class="nowrap-hidden" type="info">{{
+            scope.row.ownerDisplayName
+          }}</el-text>
+        </template>
+      </el-table-column>
+      <el-table-column prop="platfom" label="平台" width="80">
         <template #default="scope">
           {{ showPlatform(scope.row.platform) }}
         </template>
       </el-table-column>
-      <el-table-column prop="activeMemberCount" label="人数" />
-      <el-table-column prop="likeCount" label="点赞" />
-      <el-table-column prop="dislikeCount" label="点踩" />
+      <el-table-column prop="activeMemberCount" label="人数" width="60" />
+      <el-table-column prop="likeCount" label="点赞" width="60" />
+      <el-table-column prop="dislikeCount" label="点踩" width="60" />
       <el-table-column fixed="right" width="160" label="操作">
         <template #default="scope">
           <el-button
@@ -163,6 +176,11 @@ const tableHeight = (() => {
 <style lang="less" scoped>
 .link-to-club {
   text-decoration: underline #a3a3a3;
+}
+
+.nowrap-hidden {
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .el-pagination {
