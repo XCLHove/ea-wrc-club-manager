@@ -43,15 +43,22 @@ const copy = (text: string) => {
     </div>
     <div class="detail-item">
       <el-text class="label">access_token：</el-text>
-      <el-button class="token-text" type="text" @click="copy(token.access)">{{
-        token.access
-      }}</el-button>
+      <el-tooltip effect="light" content="点击复制" placement="top">
+        <el-button class="token-text" type="text" @click="copy(token.access)">{{
+          token.access
+        }}</el-button>
+      </el-tooltip>
     </div>
     <div class="detail-item">
       <el-text class="label">refresh_token：</el-text>
-      <el-button class="token-text" type="text" @click="copy(token.refresh)">{{
-        token.refresh
-      }}</el-button>
+      <el-tooltip effect="light" content="点击复制" placement="top">
+        <el-button
+          class="token-text"
+          type="text"
+          @click="copy(token.refresh)"
+          >{{ token.refresh }}</el-button
+        >
+      </el-tooltip>
     </div>
   </div>
 </template>
