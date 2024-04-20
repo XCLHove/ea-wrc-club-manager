@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/useUserStore.ts";
-import { computed, Ref } from "vue";
+import { computed, ref, Ref } from "vue";
 import { User } from "@/interfaces/User.ts";
 import { accessTokenUtil } from "@/utils/accessTokenUtil.ts";
 import { refreshTokenUtil } from "@/utils/refreshTokenUtil.ts";
 import { login } from "@/utils/login.ts";
+import { useI18nStore } from "@/stores/useI18nStore.ts";
 
 const { user }: { user: Ref<User> } = storeToRefs(useUserStore());
 const avatarText = computed(() => {
@@ -27,6 +28,9 @@ const isMobile = defineModel("isMobile", {
 const showDraper = defineModel<boolean>("showDrawer", {
   required: true,
 });
+
+const i18nStore = useI18nStore();
+const { currentLocale, locales } = storeToRefs(i18nStore);
 </script>
 
 <template>
@@ -39,6 +43,20 @@ const showDraper = defineModel<boolean>("showDrawer", {
       />
       <el-text class="font-bold">EA WRC</el-text>
       <el-text> Club Manager</el-text>
+    </div>
+    <div class="locale-switch">
+      <el-select
+        style="width: 100px"
+        v-model="currentLocale"
+        @change="i18nStore.setLocale"
+      >
+        <el-option
+          v-for="localeItem in locales"
+          :key="localeItem.value"
+          :label="localeItem.name"
+          :value="localeItem.value"
+        />
+      </el-select>
     </div>
     <div class="avatar">
       <el-dropdown>
@@ -91,6 +109,11 @@ const showDraper = defineModel<boolean>("showDrawer", {
     .font-bold {
       font-weight: bold;
     }
+  }
+
+  .locale-switch {
+    position: absolute;
+    right: 60px;
   }
 
   .avatar {

@@ -14,6 +14,9 @@ import { Platform, platforms } from "@/interfaces/Platform.ts";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
+import { useI18n } from "vue-i18n";
+import { i18nUtil } from "@/utils/i18n.ts";
+const { t } = useI18n();
 
 const tableHeight = (() => {
   const { height } = useWindowSize();
@@ -124,7 +127,7 @@ watch(
         </template>
         <el-option
           v-for="location in statsValues?.orderedLocations"
-          :label="location.value"
+          :label="i18nUtil('wrc.location', location.value)"
           :value="location.id"
           @click="setCurrentLocationID(location.id)"
         />
@@ -137,7 +140,7 @@ watch(
         </template>
         <el-option
           v-for="stage in currentLocationStages"
-          :label="stage.value"
+          :label="i18nUtil('wrc.stage', stage.value)"
           :value="stage.id"
         />
       </el-select>
@@ -151,7 +154,7 @@ watch(
         </template>
         <el-option
           v-for="vehicleClass in statsValues?.orderedVehicleClasses"
-          :label="vehicleClass.value"
+          :label="i18nUtil('wrc.vehicleClass', vehicleClass.value)"
           :value="vehicleClass.id"
         />
       </el-select>
@@ -164,7 +167,7 @@ watch(
         <el-option
           v-for="surfaceCondition in surfaceConditions"
           :value="surfaceCondition.id"
-          :label="surfaceCondition.value"
+          :label="i18nUtil('wrc.surfaceCondition', surfaceCondition.value)"
         />
       </el-select>
       <el-select v-model="params.platform" :disabled="loading">

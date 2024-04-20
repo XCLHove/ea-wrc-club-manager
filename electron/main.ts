@@ -1,8 +1,9 @@
-import { app, BrowserWindow, Menu, session, ipcMain } from "electron";
+import { app, BrowserWindow, Menu, session, ipcMain, shell } from "electron";
 import path from "node:path";
 import { optimizer } from "@electron-toolkit/utils";
 import axios from "axios";
 import ChannelKey from "./ChannelKey.ts";
+import * as Path from "path";
 
 process.env.DIST = path.join(__dirname, "../dist");
 process.env.VITE_PUBLIC = app.isPackaged
@@ -125,4 +126,9 @@ app.whenReady().then(() => {
       loginWin.close();
     });
   })();
+
+  ipcMain.on(ChannelKey.OPEN_FOLDER, (_, path = ".") => {
+    path = Path.join(app.getAppPath().replace("app.asar", ""), path);
+    shell.openPath(path);
+  });
 });

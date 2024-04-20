@@ -56,3 +56,14 @@ contextBridge.exposeInMainWorld("tokenApi", {
     return ipcRenderer.invoke(ChannelKey.REFRESH_TOKEN, refreshToken);
   },
 });
+
+contextBridge.exposeInMainWorld("systemApi", {
+  openFolder: (path = ".") => {
+    ipcRenderer.send(ChannelKey.OPEN_FOLDER, path);
+  },
+  test: (callback) => {
+    ipcRenderer.on("test", (event, data) => {
+      callback(data);
+    });
+  },
+});

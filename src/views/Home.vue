@@ -21,8 +21,6 @@ onMounted(() => {
   getMarkdownText();
 });
 
-const markdownHtml = ref("");
-
 const height = (() => {
   const { height } = useWindowSize();
 
