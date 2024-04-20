@@ -36,6 +36,7 @@ import { useWindowSize } from "@vueuse/core";
 import { computed, ref } from "vue";
 import Menu from "@/components/Menu.vue";
 import Login from "@/components/Login.vue";
+import { elPrompt } from "@/utils/elPrompt.ts";
 
 const isMobile = computed(
   (() => {
@@ -44,6 +45,10 @@ const isMobile = computed(
   })(),
 );
 const showDrawer = ref(false);
+
+window.addEventListener("copy", () => {
+  elPrompt.success("复制成功!");
+});
 </script>
 
 <style lang="less" scoped>
