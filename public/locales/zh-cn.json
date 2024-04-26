@@ -76,7 +76,8 @@
           },
           "prompt": {
             "onlyLoaded": "仅统计已加载赛段",
-            "scrollWheelToMove": "滚动鼠标滚轮左右移动"
+            "scrollWheelToMove": "滚动鼠标滚轮左右移动",
+            "exportAsExcel": "导出为Excel"
           },
           "columnName": {
             "rank": "排名",

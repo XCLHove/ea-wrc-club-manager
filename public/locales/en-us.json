@@ -76,7 +76,8 @@
           },
           "prompt": {
             "onlyLoaded": "onlyLoaded",
-            "scrollWheelToMove": "scrollWheelToMove"
+            "scrollWheelToMove": "scrollWheelToMove",
+            "exportAsExcel": "exportAsExcel"
           },
           "columnName": {
             "rank": "rank",

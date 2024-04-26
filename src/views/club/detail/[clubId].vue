@@ -24,6 +24,7 @@ import { i18nUtil } from "../../../utils/i18n";
 import { Platform } from "@/interfaces/Platform";
 import { LeaderboardItem } from "@/interfaces/ChampionshipStageLeaderboard";
 import { elPrompt } from "@/utils/elPrompt";
+import { exportToExcel } from "@/views/exportToExcel";
 
 const pageI18n = (name: string) => {
   return i18nUtil("app.page.clubDetail", name);
@@ -379,6 +380,15 @@ const selectShowOptions = {
   locationFinishedStageCount: "locationFinishedStageCount",
 };
 const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
+
+const saveFinishedStageCountAsExcel = () => {
+  const fileName = clubDetail.value.clubName;
+  const sheetName = i18nUtil(
+    "wrc.location",
+    currentLocation.value.eventSettings.location,
+  );
+  exportToExcel(fileName, sheetName, currentLocation.value.totalFinishCount);
+};
 </script>
 
 <template>
@@ -672,22 +682,29 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
           currentSelectShow === selectShowOptions.locationFinishedStageCount
         "
       >
-        <el-table
-          v-loading="loadingLeaderboard"
-          v-model:data="currentLocationFinishedStageCount"
-          :height="tableHeight"
-          :row-style="getTableRowStyle"
-        >
-          <el-table-column
-            prop="displayName"
-            :label="pageI18n(`leaderboard.columnName.name`)"
-          />
-          <el-table-column
-            prop="count"
-            sortable
-            :label="pageI18n(`leaderboard.columnName.finishedStageCount`)"
-          />
-        </el-table>
+        <el-tooltip effect="light">
+          <template #content>
+            <el-button link @click="saveFinishedStageCountAsExcel">
+              {{ pageI18n("leaderboard.prompt.exportAsExcel") }}
+            </el-button>
+          </template>
+          <el-table
+            v-loading="loadingLeaderboard"
+            v-model:data="currentLocationFinishedStageCount"
+            :height="tableHeight"
+            :row-style="getTableRowStyle"
+          >
+            <el-table-column
+              prop="displayName"
+              :label="pageI18n(`leaderboard.columnName.name`)"
+            />
+            <el-table-column
+              prop="count"
+              sortable
+              :label="pageI18n(`leaderboard.columnName.finishedStageCount`)"
+            />
+          </el-table>
+        </el-tooltip>
       </div>
     </div>
   </div>

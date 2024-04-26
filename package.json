@@ -12,6 +12,7 @@
     "@vueuse/core": "^10.9.0",
     "axios": "^1.6.8",
     "element-plus": "^2.6.3",
+    "node-xlsx": "^0.24.0",
     "pinia": "^2.1.7",
     "vditor": "^3.10.3",
     "vue": "^3.4.21",

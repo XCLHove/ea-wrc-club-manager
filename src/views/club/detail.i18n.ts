@@ -1,4 +1,67 @@
 export default {
+  select: {
+    clubDetail: "clubDetail",
+    leaderboard: "leaderboard",
+  },
+  title: {
+    clubInfo: "clubInfo",
+    championship: "championship",
+  },
+  clubInfo: {
+    label: {
+      clubName: "clubName",
+      clubID: "clubID",
+      ownerName: "ownerName",
+      accessLevel: "accessLevel",
+      description: "description",
+      count: "count",
+      like: "like",
+      dislike: "dislike",
+      createDate: "createDate",
+    },
+    prompt: {
+      clickToViewDescription: "clickToViewDescription",
+    },
+  },
+  championship: {
+    label: {
+      name: "name",
+      isHardcoreDamageEnabled: "isHardcoreDamageEnabled",
+      isAssistsAllowed: "isAssistsAllowed",
+      isTuningAllowed: "isTuningAllowed",
+    },
+    isHardcoreDamageEnabled: {
+      true: "true",
+      false: "false",
+    },
+    isAssistsAllowed: {
+      true: "true",
+      false: "false",
+    },
+    isTuningAllowed: {
+      true: "true",
+      false: "false",
+    },
+  },
+  leaderboard: {
+    selectShowOptions: {
+      stageLeaderboard: "stageLeaderboard",
+      locationTotalTimeLeaderboard: "locationTotalTimeLeaderboard",
+      locationFinishedStageCount: "locationFinishedStageCount",
+    },
+    prompt: {
+      onlyLoaded: "onlyLoaded",
+      scrollWheelToMove: "scrollWheelToMove",
+      exportAsExcel: "exportAsExcel",
+    },
+    columnName: {
+      rank: "rank",
+      name: "name",
+      time: "time",
+      differenceToFirst: "differenceToFirst",
+      finishedStageCount: "finishedStageCount",
+    },
+  },
   weatherSeason: {
     Spring: "Spring",
     Summer: "Summer",
