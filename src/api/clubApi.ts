@@ -1,7 +1,7 @@
 import request from "../utils/request.ts";
 import { AccessLevel, Club } from "../interfaces/Club.ts";
 import { Order, SortBy } from "@/interfaces/Search.ts";
-import { ClubDetail } from "@/interfaces/ClubDetail.ts";
+import { ClubDetail, Championship } from "@/interfaces/ClubDetail.ts";
 import { ChampionshipStageLeaderboard } from "@/interfaces/ChampionshipStageLeaderboard.ts";
 import { Platform } from "@/interfaces/Platform.ts";
 
@@ -154,6 +154,14 @@ export const stageLeaderboard = ({
       },
     })
     .then(({ data }: { data: ChampionshipStageLeaderboard }) => {
+      return data;
+    });
+};
+
+export const getChampionship = (championshipID: string) => {
+  return request
+    .get(`/wrc2023clubs/championships/${championshipID}`)
+    .then(({ data }: { data: Championship }) => {
       return data;
     });
 };

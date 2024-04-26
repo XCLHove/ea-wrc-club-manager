@@ -4,10 +4,10 @@ export interface ChampionshipStageLeaderboard {
   totalEntrantCount: number;
   isPlayerInLeaderboard: boolean;
   percentile: number;
-  entries: ChampionshipEntry[];
+  entries: LeaderboardItem[];
 }
 
-export interface ChampionshipEntry {
+export interface LeaderboardItem {
   ssid: string;
   displayName: string;
   rank: number;

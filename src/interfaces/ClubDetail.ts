@@ -1,5 +1,5 @@
 import { AccessLevel, Role } from "@/interfaces/Club.ts";
-import { ChampionshipEntry } from "@/interfaces/ChampionshipStageLeaderboard.ts";
+import { LeaderboardItem } from "@/interfaces/ChampionshipStageLeaderboard.ts";
 import { Platform } from "@/interfaces/Platform.ts";
 
 export interface ClubDetail {
@@ -25,13 +25,14 @@ export interface ClubDetail {
   clubCreatedAt: string;
   socialMediaLinks: any[];
   championshipIDs: string[];
-  currentChampionship: CurrentChampionship;
+  championships?: { [prototype: string]: Championship };
+  currentChampionship: Championship;
   extensions: Extensions;
   events: any[];
   verificationStatus: number;
 }
 
-export interface CurrentChampionship {
+export interface Championship {
   id: string;
   clubID: string;
   leaderboardID: any;
@@ -40,7 +41,7 @@ export interface CurrentChampionship {
   absoluteOpenDate: string;
   absoluteCloseDate: string;
   settings: Settings;
-  events: Stand[];
+  events: Location[];
 }
 
 export interface Settings {
@@ -54,26 +55,26 @@ export interface Settings {
   isTuningAllowed: boolean;
 }
 
-export enum StandStatus {
+export enum LocationStatus {
   ON_START = 0,
   RUNNING = 1,
   FINISHED = 2,
 }
 
 export const StandStatusMap = {
-  [StandStatus.ON_START]: "未开始",
-  [StandStatus.RUNNING]: "进行中",
-  [StandStatus.FINISHED]: "已结束",
+  [LocationStatus.ON_START]: "未开始",
+  [LocationStatus.RUNNING]: "进行中",
+  [LocationStatus.FINISHED]: "已结束",
 };
 
-export interface Stand {
+export interface Location {
   id: string;
   leaderboardID: string;
   relativeTimeUntilOpen: string;
   relativeTimeUntilClose: string;
   absoluteOpenDate: string;
   absoluteCloseDate: string;
-  status: number;
+  status: LocationStatus;
   eventSettings: EventSettings;
   stages: Stage[];
   totalTimeLeaderboard: TotalTimeEntry[];
@@ -101,7 +102,7 @@ export interface Stage {
   id: string;
   leaderboardID: string;
   stageSettings: StageSettings;
-  entries?: ChampionshipEntry[];
+  entries?: LeaderboardItem[];
 }
 
 export interface StageSettings {

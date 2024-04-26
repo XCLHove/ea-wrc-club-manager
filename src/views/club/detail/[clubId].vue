@@ -1,100 +1,281 @@
 <script setup lang="ts">
-import { clubDetail, stageLeaderboard } from "@/api/clubApi";
+import {
+  clubDetail as getClubDetail,
+  getChampionship,
+  stageLeaderboard,
+} from "@/api/clubApi";
 import { useRoute } from "vue-router";
-import { computed, onMounted, Ref, ref, watch } from "vue";
+import { computed, h, onMounted, Ref, ref } from "vue";
 import {
   ClubDetail,
   Stage,
-  Stand,
-  StandStatus,
-  StandStatusMap,
-  TotalTimeEntry,
+  Location,
+  Championship,
+  LocationStatus,
 } from "@/interfaces/ClubDetail";
-import { ChampionshipEntry } from "@/interfaces/ChampionshipStageLeaderboard.ts";
-import { Platform } from "@/interfaces/Platform.ts";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
 import { useWindowSize } from "@vueuse/core";
 import { TimeTrialEntry } from "@/interfaces/TimeTrialStageLeaderboard.ts";
-import { i18nUtil } from "@/utils/i18n.ts";
+import { accessLevels } from "../../../interfaces/Club";
+import { ElDialog, ElScrollbar, Instance } from "element-plus";
+import { i18nUtil } from "../../../utils/i18n";
+import { Platform } from "@/interfaces/Platform";
+import { LeaderboardItem } from "@/interfaces/ChampionshipStageLeaderboard";
+import { elPrompt } from "@/utils/elPrompt";
 
 const tableHeight = (() => {
   const { height } = useWindowSize();
 
-  return computed(() => height.value - 150);
+  return computed(() => height.value - 230);
 })();
 
-const loading = ref(false);
+const showLeaderboard = ref(false);
 
 // 俱乐部ID
 const { clubId } = useRoute().params as { clubId: string };
 // 用户信息
 const { user }: { user: Ref<User> } = storeToRefs(useUserStore());
-const getTableRowStyle = ({ row }: { row: TimeTrialEntry }) => {
-  if (row.ssid !== user.value?.ssid) return {};
-  return { "background-color": "rgba(103, 194, 58, .2)" };
-};
-// 分站
-const stands = ref<Stand[]>([]);
-onMounted(() => {
-  clubDetail(clubId).then((club: ClubDetail) => {
-    stands.value = club.currentChampionship.events || [];
-    stands.value.forEach((stand) => {
-      if (stand.status === StandStatus.RUNNING) changeStand(stand);
-    });
-  });
-});
+// 俱乐部信息
+const clubDetail = ref<ClubDetail>();
+// 当前锦标赛
+const currentChampionship = ref<Championship>();
+const currentChampionshipID = ref("");
 // 当前分站
-const currentStandID = ref<string>("");
-const currentStand = ref<Stand>({});
-// 切换分站
-const changeStand = (stand: Stand) => {
-  if (!stand) return;
-  currentStand.value.totalTimeLeaderboard = totalTimeLeaderboard.value;
-  totalTimeLeaderboard.value = stand.totalTimeLeaderboard || [];
-
-  currentStand.value = stand;
-  currentStandID.value = stand.id;
-
-  changeStage(stand.stages?.[0]);
+type NewLocation = Location & {
+  totalFinishCount?: TypeFinishCount[];
+  totalTimeLeaderBoard?: TypeTotalTime[];
 };
-
+const currentLocation = ref<NewLocation>();
+const currentLocationID = ref("");
 // 当前赛段
-const currentStageLeaderboardID = ref<string>("");
-const currentStage = ref<Stage>({});
-const changeStage = (stage: Stage) => {
-  if (!stage) return;
+const currentStage = ref<Stage>();
+const currentStageID = ref("");
+// 当前赛段排行榜
+const currentStageLeaderBoard = ref<LeaderboardItem[]>([]);
+// 已加载赛段总时间排行榜
+type TypeTotalTime = {
+  ssid: string;
+  displayName: string;
+  totalTime: number;
+  differenceToFirst: number;
+  rank: number;
+};
+const currentLocationTotalTimeLeaderBoard = ref<TypeTotalTime[]>([]);
+// 当前分站完赛赛段数（仅包含已加载赛段）
+type TypeFinishCount = {
+  ssid: string;
+  displayName: string;
+  count: number;
+};
+const currentLocationFinishedStageCount = ref<TypeFinishCount[]>([]);
+// 获取俱乐部信息
+const loadingClubDetail = ref(false);
+onMounted(() => {
+  loadingClubDetail.value = true;
+  getClubDetail(clubId)
+    .then((club: ClubDetail) => {
+      setClubDetail(club);
+    })
+    .finally(() => {
+      loadingClubDetail.value = false;
+    });
+});
+const setClubDetail = (club: ClubDetail) => {
+  clubDetail.value = club;
+  setCurrentChampionship(club.currentChampionship);
+};
+const saveClubDetail = () => {
+  // 保存到分站信息
+  currentLocation.value.stages.forEach((item, index) => {
+    if (item.id !== currentStage.value.id) return;
+    currentLocation.value.stages[index] = currentStage.value;
+  });
+  // 保存到赛事信息
+  currentChampionship.value.events.forEach((item, index) => {
+    if (item.id !== currentLocation.value.id) return;
+    currentChampionship.value.events[index] = currentLocation.value;
+  });
+  // 保存到俱乐部信息
+  clubDetail.value.championships[currentChampionship.value.id] =
+    currentChampionship.value;
+};
+const loadingChampionship = ref(false);
+const loadChampionship = (id: string) => {
+  let championship = clubDetail.value.championships[id];
+  if (championship) {
+    setCurrentChampionship(championship);
+    return;
+  }
 
+  loadingChampionship.value = true;
+  getChampionship(id)
+    .then((championship) => {
+      setCurrentChampionship(championship);
+    })
+    .catch(({ message }) => {
+      elPrompt.error(message);
+    })
+    .finally(() => {
+      loadingChampionship.value = false;
+    });
+};
+const setCurrentChampionship = (championship: Championship) => {
+  if (!championship) return;
+  clubDetail.value.championships ||= {};
+  clubDetail.value.championships[championship.id] = championship;
+  currentChampionship.value = championship;
+  currentChampionshipID.value = championship.id;
+
+  let location = championship.events?.[0];
+  championship.events?.forEach((item) => {
+    if (item.status !== LocationStatus.RUNNING) return;
+    location = item;
+  });
+  setCurrentLocation(location);
+};
+const setCurrentLocation = (location: NewLocation) => {
+  currentLocation.value = location;
+  currentLocationID.value = location.id;
+  setCurrentStage(location.stages[0]);
+  setCurrentLocationFinishedStageCount(location?.totalFinishCount || []);
+};
+const setCurrentStage = (stage: Stage) => {
   currentStage.value = stage;
-  currentStageLeaderboardID.value = stage.leaderboardID;
+  currentStageID.value = stage.id;
 
-  getStageLeaderboard();
+  if (stage.entries) {
+    currentStageLeaderBoard.value = stage.entries;
+    return;
+  }
+  loadStageLeaderboard();
+};
+const setCurrentLocationFinishedStageCount = (data: TypeFinishCount[]) => {
+  currentLocationFinishedStageCount.value = data;
+};
+const setCurrentStageLeaderboard = (entries: LeaderboardItem[]) => {
+  // 保存到赛段信息
+  currentStage.value.entries = entries;
+};
+// 统计当前分站完赛赛段数
+const updateCurrentLocationFinishedStageCount = (
+  leaderboard: LeaderboardItem[],
+) => {
+  const countMap = new Map<string, TypeFinishCount>();
+  currentLocationFinishedStageCount.value.forEach((item) => {
+    countMap.set(item.ssid, item);
+  });
+
+  leaderboard.forEach(({ ssid, displayName }) => {
+    let old = countMap.get(ssid);
+    if (!old) {
+      old = {
+        ssid,
+        displayName,
+        count: 0,
+      };
+    }
+    old.count += 1;
+    countMap.set(ssid, old);
+  });
+
+  currentLocationFinishedStageCount.value = [];
+  countMap.forEach((item) => {
+    currentLocationFinishedStageCount.value.push(item);
+  });
+  currentLocation.value.totalFinishCount =
+    currentLocationFinishedStageCount.value;
+};
+// 统计总时间排行榜
+const updateCurrentLocationTotalTimeLeaderboard = (
+  leaderboard: LeaderboardItem[],
+) => {
+  const isFirstUpdate = currentLocationTotalTimeLeaderBoard.value.length === 0;
+  const oldMap = new Map<string, TypeTotalTime>();
+  const newMap = new Map<string, TypeTotalTime>();
+  let minTimeNumber = 1000 * 60 * 60 * 24;
+  currentLocationTotalTimeLeaderBoard.value.forEach((item) => {
+    oldMap.set(item.ssid, item);
+  });
+  leaderboard.forEach(({ ssid, displayName, time }, index) => {
+    let old = oldMap.get(ssid);
+    if (!isFirstUpdate && !old) {
+      return;
+    }
+    old ||= {
+      ssid,
+      displayName,
+      totalTime: 0,
+      differenceToFirst: 0,
+      rank: 0,
+    };
+    old.totalTime += parseTimeToNumber(time);
+    if (index === 0) {
+      minTimeNumber = old.totalTime;
+    }
+    minTimeNumber = Math.min(minTimeNumber, old.totalTime);
+    newMap.set(ssid, old);
+  });
+
+  const _leaderboard: TypeTotalTime[] = [];
+  newMap.forEach((item) => {
+    item.differenceToFirst = item.totalTime - minTimeNumber;
+    _leaderboard[item.differenceToFirst] = item;
+  });
+
+  const _leaderboard2: TypeTotalTime[] = [];
+  _leaderboard.forEach((item) => {
+    _leaderboard2.push(item);
+  });
+
+  currentLocationTotalTimeLeaderBoard.value = [];
+  _leaderboard2.forEach((item, index) => {
+    item.rank = index + 1;
+    currentLocationTotalTimeLeaderBoard.value.push(item);
+  });
+
+  currentLocation.value.totalTimeLeaderBoard =
+    currentLocationTotalTimeLeaderBoard.value;
 };
 
-// 获取赛段排名
-const getStageLeaderboard = () => {
-  loading.value = true;
-  if (!user.value) {
-    const stopWatch = watch(
-      () => user.value,
-      () => {
-        stopWatch();
-        getStageLeaderboard();
-      },
-    );
-    return;
-  }
+const dialogText = ref("");
+const dialogVisible = ref(false);
+const showText = (text: string) => {
+  dialogText.value = text;
+  dialogVisible.value = true;
+};
 
-  if (currentStage.value?.entries !== undefined) {
-    loading.value = false;
-    return;
-  }
+const showSelectLocationLabel = (location: Location) => {
+  const locationName = i18nUtil(
+    "wrc.location",
+    location.eventSettings.location,
+  );
+  const weatherSeason = i18nUtil(
+    "app.page.clubDetail.weatherSeason",
+    location.eventSettings.weatherSeason,
+  );
+  const vehicleClass = i18nUtil(
+    "wrc.vehicleClass",
+    location.eventSettings.vehicleClass,
+  );
+  return `${locationName} - ${weatherSeason} - ${vehicleClass}`;
+};
+const showSelectStageLabel = (stage: Stage) => {
+  const stageName = i18nUtil("wrc.stage", stage.stageSettings.route);
+  const weatherAndSurface = i18nUtil(
+    "app.page.clubDetail.weatherAndSurface",
+    stage.stageSettings.weatherAndSurface,
+  );
+  return `${stageName} - ${weatherAndSurface}`;
+};
 
-  let _currentLeaderboard: ChampionshipEntry[] = [];
-  let savedSelf = false;
-  const getData = (nextCursor?: string) => {
-    stageLeaderboard({
+const loadingLeaderboard = ref(false);
+const loadStageLeaderboard = () => {
+  let selfEntry: LeaderboardItem = null;
+  let _currentStageLeaderBoard: LeaderboardItem[] = [];
+  const getData = async (nextCursor?: string) => {
+    await stageLeaderboard({
       clubId: clubId,
       stageLeaderboardID: currentStage.value.leaderboardID,
       SortCumulative: false,
@@ -103,260 +284,398 @@ const getStageLeaderboard = () => {
       Platform: Platform.CROSS_PLATFORM,
       Cursor: nextCursor,
     }).then(
-      ({ entries, next }: { entries: ChampionshipEntry[]; next: string }) => {
-        // 避免重复存储自己的记录
-        entries = entries.filter((entry) => {
-          if (!savedSelf && entry.ssid === user.value.ssid) {
-            savedSelf = true;
-            return entry;
-          }
-
-          return entry.ssid !== user.value.ssid;
-        });
-        _currentLeaderboard = [..._currentLeaderboard, ...entries];
-        // 如果有下一页就继续获取下一页
+      async ({
+        entries,
+        next,
+      }: {
+        entries: LeaderboardItem[];
+        next: string;
+      }) => {
+        _currentStageLeaderBoard.push(...entries);
+        // 获取下一页
         if (next) {
-          getData(next);
+          await getData(next);
           return;
         }
 
-        // 按排名排序
-        let selfEntry: ChampionshipEntry = void 0;
-        _currentLeaderboard = _currentLeaderboard.filter((entry) => {
-          if (entry.ssid !== user.value.ssid) {
-            return entry;
-          }
-          selfEntry = entry;
+        // 避免自身记录重复
+        _currentStageLeaderBoard = _currentStageLeaderBoard.filter((item) => {
+          if (item.ssid !== user.value?.ssid) return true;
+          selfEntry = item;
+          return false;
         });
-        if (selfEntry) {
-          _currentLeaderboard = [
-            ..._currentLeaderboard.slice(0, selfEntry.rank - 1),
+        // 设置自身记录
+        if (selfEntry !== null) {
+          _currentStageLeaderBoard = [
+            ..._currentStageLeaderBoard.slice(0, selfEntry.rank - 1),
             selfEntry,
-            ..._currentLeaderboard.slice(selfEntry.rank - 1),
+            ..._currentStageLeaderBoard.slice(selfEntry.rank - 1),
           ];
         }
-        // 把当前赛段排行榜存到赛段信息中
-        currentStage.value.entries = [..._currentLeaderboard];
-        // 把当前赛段信息存到当前分站信息中
-        currentStand.value.stages = currentStand.value.stages.filter(
-          (stage) => {
-            if (stage.id === currentStage.value.id) {
-              return currentStage.value;
-            }
-            return stage;
-          },
-        );
-        // 把当前分站信息存到分站列表中
-        stands.value = stands.value.filter((stand) => {
-          if (stand.id === currentStand.value.id) {
-            return currentStand.value;
-          }
-          return stand;
-        });
-        //计算已加载排行榜的总时间
-        saveTotalTimeLeaderboard(_currentLeaderboard);
+        currentStageLeaderBoard.value = _currentStageLeaderBoard;
 
-        loading.value = false;
+        if (_currentStageLeaderBoard?.length > 0) {
+          setCurrentStageLeaderboard(_currentStageLeaderBoard);
+          updateCurrentLocationFinishedStageCount(_currentStageLeaderBoard);
+          updateCurrentLocationTotalTimeLeaderboard(_currentStageLeaderBoard);
+          saveClubDetail();
+        }
       },
     );
   };
 
-  getData();
+  loadingLeaderboard.value = true;
+  getData().finally(() => {
+    loadingLeaderboard.value = false;
+  });
 };
 
-const showStand = (stand: string) => {
-  return stand.replace(/^.*Rally/, "");
-};
-
-const showTotalTime = ref(false);
-
-// 统计已经加载赛段的总时间
-const totalTimeLeaderboard = ref<TotalTimeEntry[]>([]);
 const formatNumberToTime = (ms: number) => {
   return new Date(ms).toISOString().substring(11, 23);
 };
-const saveTotalTimeLeaderboard = (() => {
-  let totalTimesMap = new Map<string, { name: string; time: number }>();
-  let isFirstSave = true;
+const parseTimeToNumber = (time: string) => {
+  let timeNumber = 0;
+  const strings: string[] = time.split(":");
+  let index = 0;
+  timeNumber += parseInt(strings[index++]) * 60 * 60 * 1000;
+  timeNumber += parseInt(strings[index++]) * 60 * 1000;
+  timeNumber += Math.ceil(parseFloat(strings[index++]) * 1000);
+  return timeNumber;
+};
 
-  const parseTimeToNumber = (time: string) => {
-    let timeNumber = 0;
-    const strings: string[] = time.split(":");
-    let index = 0;
-    timeNumber += parseInt(strings[index++]) * 60 * 60 * 1000;
-    timeNumber += parseInt(strings[index++]) * 60 * 1000;
-    timeNumber += Math.ceil(parseFloat(strings[index++]) * 1000);
-    return timeNumber;
-  };
-  const getTotalTimeLeaderboard = () => {
-    let minTime: number = void 0;
-    totalTimesMap.forEach(({ time }) => {
-      minTime = minTime === void 0 ? time : minTime;
-      minTime = Math.min(minTime, time);
-    });
+const getTableRowStyle = ({ row }: { row: TimeTrialEntry }) => {
+  if (row.ssid !== user.value?.ssid) return {};
+  return { "background-color": "rgba(103, 194, 58, .2)" };
+};
 
-    const _totalTimes: TotalTimeEntry[] = [];
-    totalTimesMap.forEach(({ name, time }, ssid) => {
-      const differenceToFirst = time - minTime;
-      _totalTimes.push({
-        name: name,
-        time: time,
-        differenceToFirst: differenceToFirst,
-        rank: 0,
-        ssid: ssid,
-      });
-    });
-    return _totalTimes
-      .sort((a, b) => {
-        return a.time - b.time;
-      })
-      .filter((item, index) => {
-        item.rank = index + 1;
-        return item;
-      });
-  };
+const scrollbarRef = ref<InstanceType<typeof ElScrollbar>>();
+let scrollLeftWidth = 0;
+const scrollStep = 50;
+let maxScrollLeftWidth = scrollLeftWidth + scrollStep + 1;
+const handleWheel = (e: WheelEvent) => {
+  e.preventDefault();
+  if (e.deltaY > 0) {
+    scrollLeftWidth = Math.min(
+      maxScrollLeftWidth,
+      scrollLeftWidth + scrollStep,
+    );
+  } else {
+    scrollLeftWidth = Math.max(0, scrollLeftWidth - scrollStep);
+  }
+  scrollbarRef.value?.setScrollLeft(scrollLeftWidth);
+};
+const handleScroll = ({ scrollLeft }) => {
+  maxScrollLeftWidth = scrollLeft + scrollStep + 1;
+  scrollLeftWidth = scrollLeft;
+};
 
-  return (entries: ChampionshipEntry[]) => {
-    const newTotalTimesMap = new Map<string, { name: string; time: number }>();
-
-    entries.forEach((value) => {
-      const { ssid, displayName, time } = value;
-      if (isFirstSave) {
-        newTotalTimesMap.set(ssid, {
-          name: displayName,
-          time: parseTimeToNumber(time),
-        });
-        return;
-      }
-
-      const lastRecord = totalTimesMap.get(ssid);
-      if (lastRecord) {
-        lastRecord.time += parseTimeToNumber(time);
-        newTotalTimesMap.set(ssid, lastRecord);
-      }
-    });
-
-    totalTimesMap = newTotalTimesMap;
-    isFirstSave = false;
-
-    totalTimeLeaderboard.value = getTotalTimeLeaderboard();
-  };
-})();
+const selectShowOptions = {
+  stageLeaderboard: "stageLeaderboard",
+  locationTotalTimeLeaderboard: "locationTotalTimeLeaderboard",
+  finishedStageCount: "finishedStageCount",
+};
+const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
 </script>
 
 <template>
   <div class="detail-container">
-    <div class="operation-container">
-      <el-radio-group
-        style="width: 250px"
-        class="stand-select"
-        v-model="showTotalTime"
+    <el-dialog v-model="dialogVisible">
+      <el-text>
+        {{ dialogText }}
+      </el-text>
+    </el-dialog>
+    <div class="select-page">
+      <el-radio-group v-model="showLeaderboard">
+        <el-radio-button :value="false">俱乐部详情</el-radio-button>
+        <el-radio-button :value="true">排行榜</el-radio-button>
+      </el-radio-group>
+    </div>
+    <div
+      class="page-container club-info-container"
+      v-show="!showLeaderboard"
+      v-loading="loadingClubDetail"
+    >
+      <h2 class="title">俱乐部信息</h2>
+      <div class="club-info">
+        <div class="info-item">
+          <el-text class="label">俱乐部名称：</el-text>
+          <el-text class="font-bold">{{ clubDetail?.clubName }}</el-text>
+        </div>
+        <div class="info-item">
+          <el-text class="label">俱乐部ID：</el-text>
+          <el-text>{{ clubDetail?.clubID }}</el-text>
+        </div>
+        <div class="info-item">
+          <el-text class="label">所属：</el-text>
+          <el-text>{{ clubDetail?.ownerDisplayName }}</el-text>
+        </div>
+        <div class="info-item">
+          <el-text class="label">访问权限：</el-text>
+          <el-text>{{ accessLevels[clubDetail?.accessLevel] }}</el-text>
+        </div>
+        <div class="info-item">
+          <el-text class="label">描述：</el-text>
+          <el-tooltip>
+            <el-button
+              link
+              class="nowrap-hidden"
+              @click="showText(clubDetail?.clubDescription)"
+              >{{ clubDetail?.clubDescription }}</el-button
+            >
+            <template #content> 点击查看完整描述 </template>
+          </el-tooltip>
+        </div>
+        <div class="info-item">
+          <el-text class="label">人数：</el-text>
+          <el-text>{{ clubDetail?.activeMemberCount }}</el-text>
+        </div>
+        <div class="info-item">
+          <el-text class="label">点赞：</el-text>
+          <el-text>{{ clubDetail?.likeCount }}</el-text>
+        </div>
+        <div class="info-item">
+          <el-text class="label">点踩：</el-text>
+          <el-text>{{ clubDetail?.dislikeCount }}</el-text>
+        </div>
+        <div class="info-item">
+          <el-text class="label">创建时间：</el-text>
+          <el-text>{{
+            new Date(clubDetail?.clubCreatedAt).toLocaleString()
+          }}</el-text>
+        </div>
+      </div>
+      <h2 class="title">赛事信息</h2>
+      <div
+        class="championship-info"
+        v-show="clubDetail?.championshipIDs.length > 0"
+        v-loading="loadingChampionship"
       >
-        <el-radio-button :value="false">当前赛段</el-radio-button>
-        <el-radio-button :value="true">总时间</el-radio-button>
+        <el-select
+          :disabled="loadingChampionship"
+          v-model="currentChampionshipID"
+        >
+          <el-option
+            v-for="(id, index) in clubDetail?.championshipIDs"
+            :value="id"
+            :key="id"
+            :label="`championship${index + 1}`"
+            @click="loadChampionship(id)"
+          >
+            championship {{ index + 1 }}
+          </el-option>
+        </el-select>
+        <div class="settings">
+          <div class="setting-item">
+            <el-text class="label">名称：</el-text>
+            <el-text>{{ currentChampionship?.settings.name }}</el-text>
+          </div>
+          <div class="setting-item">
+            <el-text class="label">拟真伤害：</el-text>
+            <el-text>{{
+              currentChampionship?.settings.isHardcoreDamageEnabled
+                ? "开"
+                : "关"
+            }}</el-text>
+          </div>
+          <div class="setting-item">
+            <el-text class="label">辅助功能：</el-text>
+            <el-text>{{
+              currentChampionship?.settings.isAssistsAllowed ? "允许" : "不允许"
+            }}</el-text>
+          </div>
+          <div class="setting-item">
+            <el-text class="label">调教车辆：</el-text>
+            <el-text>{{
+              currentChampionship?.settings.isTuningAllowed ? "允许" : "不允许"
+            }}</el-text>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-container" v-show="showLeaderboard">
+      <el-select :disabled="loadingLeaderboard" v-model="currentLocationID">
+        <el-option
+          v-for="location in currentChampionship?.events"
+          :key="location.id"
+          :value="location.id"
+          :label="showSelectLocationLabel(location)"
+          @click="setCurrentLocation(location)"
+        >
+          {{ showSelectLocationLabel(location) }}
+        </el-option>
+      </el-select>
+
+      <el-radio-group
+        class="select-stage"
+        :disabled="loadingLeaderboard"
+        v-model="currentStageID"
+      >
+        <el-tooltip content="滚动鼠标滚轮左右移动" placement="top">
+          <el-scrollbar
+            ref="scrollbarRef"
+            @mousewheel="handleWheel"
+            @scroll="handleScroll"
+          >
+            <div class="scrollbar-container">
+              <el-radio-button
+                v-for="(stage, index) in currentLocation?.stages"
+                :value="stage.id"
+                :key="stage.id"
+                :label="`${index + 1} - ${showSelectStageLabel(stage)}`"
+                @click="setCurrentStage(stage)"
+              >
+                {{ `${index + 1} - ${showSelectStageLabel(stage)}` }}
+              </el-radio-button>
+            </div>
+          </el-scrollbar>
+        </el-tooltip>
       </el-radio-group>
 
-      <el-select v-model="currentStandID">
+      <el-select v-model="currentSelectShow" :disabled="loadingLeaderboard">
         <el-option
-          v-for="stand in stands"
-          :value="stand.id"
-          :disabled="stand.id === currentStandID"
-          :label="`${i18nUtil('wrc.location', stand.eventSettings.location)}(${StandStatusMap[stand.status]})`"
+          v-for="option in selectShowOptions"
+          :label="option"
+          :key="option"
+          :value="option"
+          :disabled="option === currentSelectShow"
         >
-          <div @click="changeStand(stand)">
-            <el-text
-              type="success"
-              v-if="stand.status === StandStatus.FINISHED"
-            >
-              {{
-                `${i18nUtil("wrc.location", stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
-              }}
-            </el-text>
-            <el-text
-              type="primary"
-              v-else-if="stand.status === StandStatus.RUNNING"
-            >
-              {{
-                `${i18nUtil("wrc.location", stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
-              }}
-            </el-text>
-            <el-text type="info" v-else>
-              {{
-                `${i18nUtil("wrc.location", stand.eventSettings.location)}(${StandStatusMap[stand.status]})`
-              }}
-            </el-text>
+          <div v-if="option !== selectShowOptions.stageLeaderboard">
+            <el-tooltip placement="top" content="仅统计已加载赛段">
+              <div>{{ option }}</div>
+            </el-tooltip>
           </div>
         </el-option>
       </el-select>
-    </div>
-    <div class="operation-container">
-      <el-radio-group :disabled="loading" v-model="currentStageLeaderboardID">
-        <el-radio-button
-          v-for="(stage, i) in currentStand?.stages"
-          :value="stage.leaderboardID"
-          @change="changeStage(stage)"
-          size="small"
-          >SS {{ i + 1 }}</el-radio-button
+
+      <div v-show="currentSelectShow === selectShowOptions.stageLeaderboard">
+        <el-table
+          v-model:data="currentStageLeaderBoard"
+          :height="tableHeight"
+          :row-style="getTableRowStyle"
+          v-loading="loadingLeaderboard"
         >
-      </el-radio-group>
-    </div>
-    <div v-show="showTotalTime">
-      <el-table
-        v-loading="loading"
-        v-model:data="totalTimeLeaderboard"
-        :height="tableHeight"
-        :row-style="getTableRowStyle"
+          <el-table-column prop="rank" label="排名" width="60" />
+          <el-table-column prop="displayName" label="名字" />
+          <el-table-column prop="time" label="时间">
+            <template #default="scope">
+              {{ scope.row?.time?.substring(0, 12) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="differenceToFirst" label="差时">
+            <template #default="scope">
+              {{ scope.row?.differenceToFirst?.substring(0, 12) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <div
+        v-show="
+          currentSelectShow === selectShowOptions.locationTotalTimeLeaderboard
+        "
       >
-        <el-table-column prop="rank" label="排名" />
-        <el-table-column prop="name" label="名字" />
-        <el-table-column prop="time" label="总时间">
-          <template #default="scope">
-            {{ formatNumberToTime(scope.row.time) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="differenceToFirst" label="总时差">
-          <template #default="scope">
-            {{ formatNumberToTime(scope.row.differenceToFirst) }}
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
-    <div v-show="!showTotalTime">
-      <el-table
-        v-loading="loading"
-        v-model:data="currentStage.entries"
-        :height="tableHeight"
-        :row-style="getTableRowStyle"
-      >
-        <el-table-column prop="rank" label="排名" />
-        <el-table-column prop="displayName" label="名字" />
-        <el-table-column prop="time" label="时间">
-          <template #default="scope">
-            {{ scope.row.time.substring(0, 12) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="differenceToFirst" label="差时">
-          <template #default="scope">
-            {{ scope.row.differenceToFirst.substring(0, 12) }}
-          </template>
-        </el-table-column>
-      </el-table>
+        <el-table
+          v-loading="loadingLeaderboard"
+          v-model:data="currentLocationTotalTimeLeaderBoard"
+          :height="tableHeight"
+          :row-style="getTableRowStyle"
+        >
+          <el-table-column prop="rank" label="排名" width="60" />
+          <el-table-column prop="displayName" label="名字" />
+          <el-table-column prop="totalTime" label="总时间">
+            <template #default="scope">
+              {{ formatNumberToTime(scope.row.totalTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="differenceToFirst" label="总时差">
+            <template #default="scope">
+              {{ formatNumberToTime(scope.row.differenceToFirst) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <div v-show="currentSelectShow === selectShowOptions.finishedStageCount">
+        <el-table
+          v-loading="loadingLeaderboard"
+          v-model:data="currentLocationFinishedStageCount"
+          :height="tableHeight"
+          :row-style="getTableRowStyle"
+        >
+          <el-table-column prop="displayName" label="名字" />
+          <el-table-column prop="count" sortable label="完成赛段数" />
+        </el-table>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
 .detail-container {
-  .operation-container {
-    display: flex;
-    margin-bottom: 10px;
+  width: 100%;
 
-    .stand-select {
-      width: 200px;
+  .select-page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .page-container {
+    width: 100%;
+  }
+
+  .club-info-container {
+    .title {
+      font-size: 25px;
+      color: var(--el-color-info);
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    .club-info {
+      .info-item {
+        border-bottom: 1px solid var(--el-border-color);
+        width: 100%;
+        margin: 10px 0;
+        display: flex;
+
+        .label {
+          width: 90px;
+          text-align: right;
+        }
+
+        .nowrap-hidden {
+          white-space: nowrap;
+          overflow: hidden;
+          max-width: calc(100vw - 250px);
+        }
+
+        .font-bold {
+          font-weight: bold;
+        }
+      }
+    }
+    .championship-info {
+      .settings {
+        .setting-item {
+          display: flex;
+          .label {
+            width: 90px;
+            text-align: right;
+          }
+        }
+      }
     }
   }
-}
-.a {
-  color: #dcdcdc;
+
+  .select-stage {
+    width: calc(100vw - 130px);
+
+    .scrollbar-container {
+      display: flex;
+      margin: 10px 0;
+    }
+  }
 }
 </style>
