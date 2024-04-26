@@ -7,6 +7,11 @@ import { accessTokenUtil } from "@/utils/accessTokenUtil.ts";
 import { refreshTokenUtil } from "@/utils/refreshTokenUtil.ts";
 import { login } from "@/utils/login.ts";
 import { useI18nStore } from "@/stores/useI18nStore.ts";
+import { i18nUtil } from "@/utils/i18n.ts";
+
+const pageI18n = (name: string) => {
+  return i18nUtil("app.component.header", name);
+};
 
 const { user }: { user: Ref<User> } = storeToRefs(useUserStore());
 const avatarText = computed(() => {
@@ -30,7 +35,7 @@ const showDraper = defineModel<boolean>("showDrawer", {
 });
 
 const i18nStore = useI18nStore();
-const { currentLocale, locales } = storeToRefs(i18nStore);
+const { locales } = storeToRefs(i18nStore);
 </script>
 
 <template>
@@ -45,35 +50,38 @@ const { currentLocale, locales } = storeToRefs(i18nStore);
       <el-text> Club Manager</el-text>
     </div>
     <div class="locale-switch">
-      <el-select
-        style="width: 100px"
-        v-model="currentLocale"
-        @change="i18nStore.setLocale"
-      >
-        <el-option
-          v-for="localeItem in locales"
-          :key="localeItem.value"
-          :label="localeItem.name"
-          :value="localeItem.value"
-        />
-      </el-select>
+      <el-dropdown>
+        <i class="iconfont icon-i18n" style="font-size: 32px"></i>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item
+              v-for="localeItem in locales"
+              @click="i18nStore.setLocale(localeItem.value)"
+            >
+              {{ localeItem.name }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
     <div class="avatar">
       <el-dropdown>
         <div>
-          <el-avatar v-show="!user" @click="login">登录</el-avatar>
+          <el-avatar v-show="!user">{{
+            pageI18n("avatar.defaultContent")
+          }}</el-avatar>
           <el-avatar v-show="user" :src="user?.preferences?.profileImageUrl">
             {{ avatarText }}
           </el-avatar>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item v-if="!user" @click="login"
-              >登录</el-dropdown-item
-            >
-            <el-dropdown-item v-if="user" @click="logout"
-              >注销</el-dropdown-item
-            >
+            <el-dropdown-item v-if="!user" @click="login">{{
+              pageI18n("avatar.dropdownOption.login")
+            }}</el-dropdown-item>
+            <el-dropdown-item v-if="user" @click="logout">{{
+              pageI18n("avatar.dropdownOption.logout")
+            }}</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>

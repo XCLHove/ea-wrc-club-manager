@@ -18,4 +18,15 @@ export interface LocaleObject {
       [property: string]: string;
     };
   };
+  app: {
+    menu: {
+      [prototype: string]: string;
+    };
+    page: {
+      [prototype: string]: any;
+    };
+    components: {
+      [prototype: string]: any;
+    };
+  };
 }

@@ -25,6 +25,10 @@ import { Platform } from "@/interfaces/Platform";
 import { LeaderboardItem } from "@/interfaces/ChampionshipStageLeaderboard";
 import { elPrompt } from "@/utils/elPrompt";
 
+const pageI18n = (name: string) => {
+  return i18nUtil("app.page.clubDetail", name);
+};
+
 const tableHeight = (() => {
   const { height } = useWindowSize();
 
@@ -372,7 +376,7 @@ const handleScroll = ({ scrollLeft }) => {
 const selectShowOptions = {
   stageLeaderboard: "stageLeaderboard",
   locationTotalTimeLeaderboard: "locationTotalTimeLeaderboard",
-  finishedStageCount: "finishedStageCount",
+  locationFinishedStageCount: "locationFinishedStageCount",
 };
 const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
 </script>
@@ -386,8 +390,12 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
     </el-dialog>
     <div class="select-page">
       <el-radio-group v-model="showLeaderboard">
-        <el-radio-button :value="false">俱乐部详情</el-radio-button>
-        <el-radio-button :value="true">排行榜</el-radio-button>
+        <el-radio-button :value="false">
+          {{ pageI18n("select.clubDetail") }}
+        </el-radio-button>
+        <el-radio-button :value="true">
+          {{ pageI18n("select.leaderboard") }}
+        </el-radio-button>
       </el-radio-group>
     </div>
     <div
@@ -395,56 +403,74 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
       v-show="!showLeaderboard"
       v-loading="loadingClubDetail"
     >
-      <h2 class="title">俱乐部信息</h2>
+      <h2 class="title">{{ pageI18n("title.clubInfo") }}</h2>
       <div class="club-info">
         <div class="info-item">
-          <el-text class="label">俱乐部名称：</el-text>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.clubName")
+          }}</el-text>
           <el-text class="font-bold">{{ clubDetail?.clubName }}</el-text>
         </div>
         <div class="info-item">
-          <el-text class="label">俱乐部ID：</el-text>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.clubID")
+          }}</el-text>
           <el-text>{{ clubDetail?.clubID }}</el-text>
         </div>
         <div class="info-item">
-          <el-text class="label">所属：</el-text>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.ownerName")
+          }}</el-text>
           <el-text>{{ clubDetail?.ownerDisplayName }}</el-text>
         </div>
         <div class="info-item">
-          <el-text class="label">访问权限：</el-text>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.accessLevel")
+          }}</el-text>
           <el-text>{{ accessLevels[clubDetail?.accessLevel] }}</el-text>
         </div>
         <div class="info-item">
-          <el-text class="label">描述：</el-text>
-          <el-tooltip>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.description")
+          }}</el-text>
+          <el-tooltip
+            effect="light"
+            :content="pageI18n('clubInfo.prompt.clickToViewDescription')"
+          >
             <el-button
               link
               class="nowrap-hidden"
               @click="showText(clubDetail?.clubDescription)"
               >{{ clubDetail?.clubDescription }}</el-button
             >
-            <template #content> 点击查看完整描述 </template>
           </el-tooltip>
         </div>
         <div class="info-item">
-          <el-text class="label">人数：</el-text>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.count")
+          }}</el-text>
           <el-text>{{ clubDetail?.activeMemberCount }}</el-text>
         </div>
         <div class="info-item">
-          <el-text class="label">点赞：</el-text>
+          <el-text class="label">{{ pageI18n("clubInfo.label.like") }}</el-text>
           <el-text>{{ clubDetail?.likeCount }}</el-text>
         </div>
         <div class="info-item">
-          <el-text class="label">点踩：</el-text>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.dislike")
+          }}</el-text>
           <el-text>{{ clubDetail?.dislikeCount }}</el-text>
         </div>
         <div class="info-item">
-          <el-text class="label">创建时间：</el-text>
+          <el-text class="label">{{
+            pageI18n("clubInfo.label.createDate")
+          }}</el-text>
           <el-text>{{
             new Date(clubDetail?.clubCreatedAt).toLocaleString()
           }}</el-text>
         </div>
       </div>
-      <h2 class="title">赛事信息</h2>
+      <h2 class="title">{{ pageI18n("title.championship") }}</h2>
       <div
         class="championship-info"
         v-show="clubDetail?.championshipIDs.length > 0"
@@ -466,27 +492,39 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
         </el-select>
         <div class="settings">
           <div class="setting-item">
-            <el-text class="label">名称：</el-text>
+            <el-text class="label">{{
+              pageI18n("championship.label.name")
+            }}</el-text>
             <el-text>{{ currentChampionship?.settings.name }}</el-text>
           </div>
           <div class="setting-item">
-            <el-text class="label">拟真伤害：</el-text>
+            <el-text class="label">{{
+              pageI18n("championship.label.isHardcoreDamageEnabled")
+            }}</el-text>
             <el-text>{{
               currentChampionship?.settings.isHardcoreDamageEnabled
-                ? "开"
-                : "关"
+                ? pageI18n("championship.isHardcoreDamageEnabled.true")
+                : pageI18n("championship.isHardcoreDamageEnabled.false")
             }}</el-text>
           </div>
           <div class="setting-item">
-            <el-text class="label">辅助功能：</el-text>
+            <el-text class="label">{{
+              pageI18n("championship.label.isAssistsAllowed")
+            }}</el-text>
             <el-text>{{
-              currentChampionship?.settings.isAssistsAllowed ? "允许" : "不允许"
+              currentChampionship?.settings.isAssistsAllowed
+                ? pageI18n("championship.isAssistsAllowed.true")
+                : pageI18n("championship.isAssistsAllowed.false")
             }}</el-text>
           </div>
           <div class="setting-item">
-            <el-text class="label">调教车辆：</el-text>
+            <el-text class="label">{{
+              pageI18n("championship.label.isTuningAllowed")
+            }}</el-text>
             <el-text>{{
-              currentChampionship?.settings.isTuningAllowed ? "允许" : "不允许"
+              currentChampionship?.settings.isTuningAllowed
+                ? pageI18n("championship.isTuningAllowed.true")
+                : pageI18n("championship.isTuningAllowed.false")
             }}</el-text>
           </div>
         </div>
@@ -510,7 +548,10 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
         :disabled="loadingLeaderboard"
         v-model="currentStageID"
       >
-        <el-tooltip content="滚动鼠标滚轮左右移动" placement="top">
+        <el-tooltip
+          :content="pageI18n(`leaderboard.prompt.scrollWheelToMove`)"
+          effect="light"
+        >
           <el-scrollbar
             ref="scrollbarRef"
             @mousewheel="handleWheel"
@@ -534,14 +575,19 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
       <el-select v-model="currentSelectShow" :disabled="loadingLeaderboard">
         <el-option
           v-for="option in selectShowOptions"
-          :label="option"
+          :label="pageI18n(`leaderboard.selectShowOptions.${option}`)"
           :key="option"
           :value="option"
           :disabled="option === currentSelectShow"
         >
           <div v-if="option !== selectShowOptions.stageLeaderboard">
-            <el-tooltip placement="top" content="仅统计已加载赛段">
-              <div>{{ option }}</div>
+            <el-tooltip
+              effect="light"
+              :content="pageI18n(`leaderboard.prompt.onlyLoaded`)"
+            >
+              <div>
+                {{ pageI18n(`leaderboard.selectShowOptions.${option}`) }}
+              </div>
             </el-tooltip>
           </div>
         </el-option>
@@ -554,14 +600,27 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
           :row-style="getTableRowStyle"
           v-loading="loadingLeaderboard"
         >
-          <el-table-column prop="rank" label="排名" width="60" />
-          <el-table-column prop="displayName" label="名字" />
-          <el-table-column prop="time" label="时间">
+          <el-table-column
+            prop="rank"
+            :label="pageI18n(`leaderboard.columnName.rank`)"
+            width="60"
+          />
+          <el-table-column
+            prop="displayName"
+            :label="pageI18n(`leaderboard.columnName.name`)"
+          />
+          <el-table-column
+            prop="time"
+            :label="pageI18n(`leaderboard.columnName.time`)"
+          >
             <template #default="scope">
               {{ scope.row?.time?.substring(0, 12) }}
             </template>
           </el-table-column>
-          <el-table-column prop="differenceToFirst" label="差时">
+          <el-table-column
+            prop="differenceToFirst"
+            :label="pageI18n(`leaderboard.columnName.differenceToFirst`)"
+          >
             <template #default="scope">
               {{ scope.row?.differenceToFirst?.substring(0, 12) }}
             </template>
@@ -580,14 +639,27 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
           :height="tableHeight"
           :row-style="getTableRowStyle"
         >
-          <el-table-column prop="rank" label="排名" width="60" />
-          <el-table-column prop="displayName" label="名字" />
-          <el-table-column prop="totalTime" label="总时间">
+          <el-table-column
+            prop="rank"
+            :label="pageI18n(`leaderboard.columnName.rank`)"
+            width="60"
+          />
+          <el-table-column
+            prop="displayName"
+            :label="pageI18n(`leaderboard.columnName.name`)"
+          />
+          <el-table-column
+            prop="totalTime"
+            :label="pageI18n(`leaderboard.columnName.time`)"
+          >
             <template #default="scope">
               {{ formatNumberToTime(scope.row.totalTime) }}
             </template>
           </el-table-column>
-          <el-table-column prop="differenceToFirst" label="总时差">
+          <el-table-column
+            prop="differenceToFirst"
+            :label="pageI18n(`leaderboard.columnName.differenceToFirst`)"
+          >
             <template #default="scope">
               {{ formatNumberToTime(scope.row.differenceToFirst) }}
             </template>
@@ -595,15 +667,26 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
         </el-table>
       </div>
 
-      <div v-show="currentSelectShow === selectShowOptions.finishedStageCount">
+      <div
+        v-show="
+          currentSelectShow === selectShowOptions.locationFinishedStageCount
+        "
+      >
         <el-table
           v-loading="loadingLeaderboard"
           v-model:data="currentLocationFinishedStageCount"
           :height="tableHeight"
           :row-style="getTableRowStyle"
         >
-          <el-table-column prop="displayName" label="名字" />
-          <el-table-column prop="count" sortable label="完成赛段数" />
+          <el-table-column
+            prop="displayName"
+            :label="pageI18n(`leaderboard.columnName.name`)"
+          />
+          <el-table-column
+            prop="count"
+            sortable
+            :label="pageI18n(`leaderboard.columnName.finishedStageCount`)"
+          />
         </el-table>
       </div>
     </div>
@@ -643,6 +726,11 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
         .label {
           width: 90px;
           text-align: right;
+          margin-right: 10px;
+
+          &::after {
+            content: ":";
+          }
         }
 
         .nowrap-hidden {
@@ -663,6 +751,11 @@ const currentSelectShow = ref(selectShowOptions.stageLeaderboard);
           .label {
             width: 90px;
             text-align: right;
+            margin-right: 10px;
+
+            &::after {
+              content: ":";
+            }
           }
         }
       }

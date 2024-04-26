@@ -14,9 +14,12 @@ import { Platform, platforms } from "@/interfaces/Platform.ts";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
-import { useI18n } from "vue-i18n";
 import { i18nUtil } from "@/utils/i18n.ts";
-const { t } = useI18n();
+import { elPrompt } from "@/utils/elPrompt";
+
+const pageI18n = (name: string) => {
+  return i18nUtil("app.page.timeTrail", name);
+};
 
 const tableHeight = (() => {
   const { height } = useWindowSize();
@@ -61,7 +64,7 @@ const params = ref<Parameters<typeof timeTrialLeaderBoard>[0]>({
   stageID: "",
   surfaceConditionID: "",
   vehicleClassID: "",
-  platform: Platform.CROSS_PLATFORM,
+  platform: `${Platform.CROSS_PLATFORM}`,
   cursor: undefined,
   focusOnMe: false,
   maxResultCount: 20,
@@ -77,6 +80,9 @@ const getLeaderboard = () => {
       leaderboard.value = data;
 
       loading.value = false;
+    })
+    .catch(({ message }) => {
+      elPrompt.error(message);
     })
     .finally(() => {
       loading.value = false;
@@ -121,9 +127,9 @@ watch(
     <div class="options">
       <el-select v-model="currentLocationID" :disabled="loading">
         <template #header>
-          <el-text style="display: flex; justify-content: center"
-            >选择分站</el-text
-          >
+          <el-text style="display: flex; justify-content: center">{{
+            pageI18n("selectHeader.selectLocation")
+          }}</el-text>
         </template>
         <el-option
           v-for="location in statsValues?.orderedLocations"
@@ -134,9 +140,9 @@ watch(
       </el-select>
       <el-select v-model="params.stageID" :disabled="loading">
         <template #header>
-          <el-text style="display: flex; justify-content: center"
-            >选择赛段</el-text
-          >
+          <el-text style="display: flex; justify-content: center">{{
+            pageI18n("selectHeader.selectStage")
+          }}</el-text>
         </template>
         <el-option
           v-for="stage in currentLocationStages"
@@ -148,9 +154,9 @@ watch(
     <div class="options">
       <el-select v-model="params.vehicleClassID" :disabled="loading">
         <template #header>
-          <el-text style="display: flex; justify-content: center"
-            >选择组别</el-text
-          >
+          <el-text style="display: flex; justify-content: center">{{
+            pageI18n("selectHeader.selectVehicleClass")
+          }}</el-text>
         </template>
         <el-option
           v-for="vehicleClass in statsValues?.orderedVehicleClasses"
@@ -160,9 +166,9 @@ watch(
       </el-select>
       <el-select v-model="params.surfaceConditionID" :disabled="loading">
         <template #header>
-          <el-text style="display: flex; justify-content: center"
-            >选择路面情况</el-text
-          >
+          <el-text style="display: flex; justify-content: center">{{
+            pageI18n("selectHeader.selectSurfaceCondition")
+          }}</el-text>
         </template>
         <el-option
           v-for="surfaceCondition in surfaceConditions"
@@ -171,11 +177,20 @@ watch(
         />
       </el-select>
       <el-select v-model="params.platform" :disabled="loading">
-        <el-option
-          v-for="platform in platforms"
-          :label="platform.description"
-          :value="platform.value"
-        />
+        <template #header>
+          <el-text style="display: flex; justify-content: center">{{
+            pageI18n("selectHeader.selectPlatform")
+          }}</el-text>
+        </template>
+        <div v-for="(platform, key) in platforms">
+          <el-option
+            v-if="Platform.Steam !== parseInt(String(key))"
+            :label="pageI18n(`platform.${platform}`)"
+            :value="key"
+            :key="key"
+          >
+          </el-option>
+        </div>
       </el-select>
     </div>
     <div class="show-leaderboard" v-loading="loading">
@@ -184,14 +199,24 @@ watch(
         :height="tableHeight"
         :row-style="getTableRowStyle"
       >
-        <el-table-column prop="rank" label="排名" width="75"></el-table-column>
-        <el-table-column prop="displayName" label="名称"></el-table-column>
-        <el-table-column prop="time" label="时间">
+        <el-table-column
+          prop="rank"
+          :label="pageI18n('columnName.rank')"
+          width="75"
+        ></el-table-column>
+        <el-table-column
+          prop="displayName"
+          :label="pageI18n('columnName.name')"
+        ></el-table-column>
+        <el-table-column prop="time" :label="pageI18n('columnName.time')">
           <template #default="scope">
             {{ scope.row.time.substring(0, 12) }}
           </template>
         </el-table-column>
-        <el-table-column prop="differenceToFirst" label="时差">
+        <el-table-column
+          prop="differenceToFirst"
+          :label="pageI18n('columnName.differenceToFirst')"
+        >
           <template #default="scope">
             {{ scope.row.time.substring(0, 12) }}
           </template>

@@ -5,8 +5,13 @@ import getPageSizes from "@/utils/getPageSizes.ts";
 import { closeClub, joinClub, leaveClub, searchClub } from "@/api/clubApi.ts";
 import { Order, orders, SortBy, sortBys } from "@/interfaces/Search.ts";
 import { useClipboard, useWindowSize } from "@vueuse/core";
-import { showPlatform } from "@/interfaces/Platform.ts";
 import { elPrompt } from "@/utils/elPrompt.ts";
+import { platforms } from "@/interfaces/Platform";
+import { i18nUtil } from "@/utils/i18n";
+
+const pageI18n = (name: string) => {
+  return i18nUtil("app.page.clubSearch", name);
+};
 
 const loading = ref(false);
 const clubs: Ref<Club[]> = ref([]);
@@ -16,8 +21,8 @@ const searchValue = ref<{
   order: Order;
 }>({
   text: "",
-  sort: SortBy.CREATION_DATE,
-  order: Order.DESC,
+  sort: SortBy.CREATION_DATE.toString(),
+  order: Order.DESC.toString(),
 });
 const page = ref({
   current: 1,
@@ -101,27 +106,29 @@ const tableHeight = (() => {
       <el-input
         class="item"
         v-model="searchValue.text"
-        placeholder="俱乐部名称"
+        :placeholder="pageI18n('inputPrompt')"
         @keydown.enter="search"
       />
       <div style="display: flex">
-        <el-text style="width: 35px"> 排序:</el-text>
+        <el-text style="width: 35px">{{ pageI18n("sortByLabel") }}:</el-text>
         <el-select style="width: 110px" class="item" v-model="searchValue.sort">
           <el-option
-            v-for="item in sortBys"
-            :label="item.description"
-            :value="item.value"
+            v-for="(_, key) in sortBys"
+            :label="pageI18n(`sortBy.${sortBys[key]}`)"
+            :value="key"
           />
         </el-select>
         <el-select style="width: 80px" class="item" v-model="searchValue.order">
           <el-option
-            v-for="item in orders"
-            :label="item.description"
-            :value="item.value"
+            v-for="(_, key) in orders"
+            :label="pageI18n(`orderBy.${orders[key]}`)"
+            :value="key"
           />
         </el-select>
       </div>
-      <el-button class="item" @click="search" type="primary">搜索</el-button>
+      <el-button class="item" @click="search" type="primary">{{
+        pageI18n("button.search")
+      }}</el-button>
     </div>
     <el-table
       :data="clubs"
@@ -129,7 +136,11 @@ const tableHeight = (() => {
       v-loading="loading"
       :height="tableHeight"
     >
-      <el-table-column prop="clubName" label="俱乐部名称" width="130">
+      <el-table-column
+        prop="clubName"
+        :label="pageI18n('columnName.clubName')"
+        width="130"
+      >
         <template #default="scope">
           <router-link
             class="link-to-club"
@@ -141,45 +152,73 @@ const tableHeight = (() => {
           </router-link>
         </template>
       </el-table-column>
-      <el-table-column prop="ownerDisplayName" label="所属" width="100">
+      <el-table-column
+        prop="ownerDisplayName"
+        :label="pageI18n('columnName.ownerName')"
+        width="100"
+      >
         <template #default="scope">
           <el-text class="nowrap-hidden" type="info">{{
             scope.row.ownerDisplayName
           }}</el-text>
         </template>
       </el-table-column>
-      <el-table-column prop="platfom" label="平台" width="80">
+      <el-table-column
+        prop="platform"
+        :label="pageI18n('columnName.platform')"
+        width="80"
+      >
         <template #default="scope">
-          {{ showPlatform(scope.row.platform) }}
+          <el-text class="nowrap-hidden" type="info">{{
+            platforms[scope.row.platform]
+          }}</el-text>
         </template>
       </el-table-column>
-      <el-table-column prop="activeMemberCount" label="人数" width="60" />
-      <el-table-column prop="likeCount" label="点赞" width="60" />
-      <el-table-column prop="dislikeCount" label="点踩" width="60" />
-      <el-table-column fixed="right" width="160" label="操作">
+      <el-table-column
+        prop="activeMemberCount"
+        :label="pageI18n('columnName.count')"
+        width="60"
+      />
+      <el-table-column
+        prop="likeCount"
+        :label="pageI18n('columnName.like')"
+        width="55"
+      />
+      <el-table-column
+        prop="dislikeCount"
+        :label="pageI18n('columnName.dislike')"
+        width="55"
+      />
+      <el-table-column
+        fixed="right"
+        width="170"
+        :label="pageI18n('columnName.operation')"
+      >
         <template #default="scope">
           <el-button
             v-if="scope.row.role === Role.OWNER"
             type="danger"
             @click="close(scope.row.clubID)"
           >
-            解散
+            {{ pageI18n("button.close") }}
           </el-button>
           <el-button
             v-if="scope.row.role === Role.MEMBER"
             type="warning"
             @click="leave(scope.row.clubID)"
           >
-            退出
+            {{ pageI18n("button.leave") }}
           </el-button>
           <el-button
             v-if="scope.row.role === Role.NO_JOIN"
-            type="success"
+            type="primary"
             @click="join(scope.row.clubID)"
           >
-            加入
+            {{ pageI18n("button.join") }}
           </el-button>
-          <el-button type="success" @click="copy(scope.row)"> 复制 </el-button>
+          <el-button type="success" @click="copy(scope.row)">
+            {{ pageI18n("button.copy") }}
+          </el-button>
         </template>
       </el-table-column>
     </el-table>

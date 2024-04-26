@@ -6,13 +6,18 @@ import { ref } from "vue";
 import { ElMessage, FormInstance, FormRules } from "element-plus";
 import { AxiosError } from "axios";
 import { debounce } from "@/utils/debounce/debounce.ts";
+import { i18nUtil } from "@/utils/i18n";
+
+const pageI18n = (name: string) => {
+  return i18nUtil("app.page.clubCreate", name);
+};
 
 const formData = ref({
   name: "",
   description: "",
   imageCatalogueID: 1,
   accessLevel: AccessLevel.OPEN,
-  platform: Platform.CROSS_PLATFORM,
+  platform: Platform.CROSS_PLATFORM.toString(),
   officialClubType: 0,
   discordServerUrl: "",
   twitchChannelUrl: "",
@@ -79,7 +84,6 @@ const validateDescription = (() => {
       callback();
       return;
     }
-    console.log(value);
 
     let message = messageMap.get(value);
     if (message) {
@@ -94,10 +98,12 @@ const formRules = ref<FormRules<typeof formData>>({
   name: [{ validator: validateName, trigger: "blur" }],
   description: [{ validator: validateDescription, trigger: "blur" }],
 });
-
+const creating = ref(false);
 const create = () => {
+  creating.value = true;
   formRef.value?.validate((valid) => {
     if (!valid) {
+      creating.value = false;
       return;
     }
 
@@ -115,6 +121,9 @@ const create = () => {
       })
       .catch((error) => {
         console.log(error);
+      })
+      .finally(() => {
+        creating.value = false;
       });
   });
 };
@@ -126,7 +135,7 @@ const resetFields = () => {
 </script>
 
 <template>
-  <div class="create-container">
+  <div class="create-container" v-loading="creating">
     <el-form
       :model="formData"
       label-width="95px"
@@ -134,61 +143,83 @@ const resetFields = () => {
       :rules="formRules"
       status-icon
     >
-      <el-form-item prop="name" label="俱乐部名称">
-        <el-input placeholder="俱乐部名称" v-model="formData.name" />
+      <el-form-item prop="name" :label="pageI18n('formLabel.clubName')">
+        <el-input
+          :placeholder="pageI18n('formLabel.clubName')"
+          v-model="formData.name"
+        />
       </el-form-item>
-      <el-form-item label="俱乐部介绍">
+      <el-form-item
+        prop="description"
+        :label="pageI18n('formLabel.description')"
+      >
         <el-input
           type="textarea"
           rows="1"
-          placeholder="俱乐部介绍"
+          :placeholder="pageI18n('formLabel.description')"
           v-model="formData.description"
         />
       </el-form-item>
-      <el-form-item prop="platform" label="平台">
+      <el-form-item prop="platform" :label="pageI18n('formLabel.platform')">
         <el-select v-model="formData.platform">
           <el-option
-            v-for="platform in platforms"
-            :key="platform.value"
-            :label="platform.description"
-            :value="platform.value"
+            v-for="(platform, key) in platforms"
+            :key="key"
+            :label="i18nUtil('app.page.clubCreate.platform', platform)"
+            :value="key"
           />
         </el-select>
       </el-form-item>
-      <el-form-item prop="accessLevel" label="访问权限">
+      <el-form-item
+        prop="accessLevel"
+        :label="pageI18n('formLabel.accessLevel')"
+      >
         <el-select v-model="formData.accessLevel">
           <el-option
-            v-for="accessLevel in accessLevels"
-            :key="accessLevel.value"
-            :label="accessLevel.description"
-            :value="accessLevel.value"
+            v-for="(accessLevel, key) in accessLevels"
+            :key="key"
+            :label="i18nUtil('app.page.clubCreate.accessLevel', accessLevel)"
+            :value="key"
           />
         </el-select>
       </el-form-item>
-      <el-form-item prop="discordServerUrl" label="Discord">
+      <el-form-item
+        prop="discordServerUrl"
+        :label="pageI18n('formLabel.Discord')"
+      >
         <el-input
           placeholder="discord link"
           v-model="formData.discordServerUrl"
         />
       </el-form-item>
-      <el-form-item prop="twitchChannelUrl" label="Twitch">
+      <el-form-item
+        prop="twitchChannelUrl"
+        :label="pageI18n('formLabel.Twitch')"
+      >
         <el-input
           placeholder="twitch link"
           v-model="formData.twitchChannelUrl"
         />
       </el-form-item>
-      <el-form-item prop="youtubeChannelUrl" label="YouTube">
+      <el-form-item
+        prop="youtubeChannelUrl"
+        :label="pageI18n('formLabel.YouTube')"
+      >
         <el-input
           placeholder="youtube link"
           v-model="formData.youtubeChannelUrl"
         />
       </el-form-item>
-      <el-form-item label="自动清空">
+      <el-form-item :label="pageI18n('formLabel.autoClear')">
         <el-checkbox v-model="autoReset" />
       </el-form-item>
       <div class="button-container">
-        <el-button type="danger" @click="resetFields">清空</el-button>
-        <el-button type="primary" @click="create">创建</el-button>
+        <el-button type="danger" @click="resetFields">
+          {{ pageI18n("button.clear") }}
+        </el-button>
+        <el-button type="primary" @click="create">
+          {{ pageI18n("button.create") }}
+        </el-button>
       </div>
     </el-form>
   </div>

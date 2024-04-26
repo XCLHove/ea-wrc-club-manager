@@ -27,11 +27,15 @@ const i18n = createI18n({
   messages: _i18nMessages,
   legacy: false,
   //globalInjection: true,
+  fallbackWarn: false,
+  missingWarn: false,
 });
 
 export const i18nMessages = _i18nMessages;
 
-export const i18nUtil = (prefix: string, key: number | string) => {
+export const i18nUtil = (prefix: string, key: string) => {
+  // 去掉特殊字符
+  key = key.replace("'", " ");
   // @ts-ignore
   return i18n.global.t(`${prefix}.${key}`).replace(`${prefix}.`, "");
 };

@@ -25,10 +25,14 @@ export enum AccessLevel {
   OPEN = "0",
   FRIENDS_ONLY = "3",
 }
-export const accessLevels = [
-  { value: AccessLevel.OPEN, description: "公开" },
-  { value: AccessLevel.FRIENDS_ONLY, description: "仅好友" },
-];
+
+export const accessLevels = (() => {
+  const _accessLevels: { [prototype: string]: string } = {};
+  _accessLevels[AccessLevel.OPEN] = "Open";
+  _accessLevels[AccessLevel.FRIENDS_ONLY] = "FriendsOnly";
+
+  return _accessLevels;
+})();
 
 export enum Role {
   NO_JOIN = 0,

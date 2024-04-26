@@ -2,12 +2,17 @@
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
-import { showPlatform } from "../interfaces/Platform.ts";
 import { ref, watch } from "vue";
 import { accessTokenUtil } from "@/utils/accessTokenUtil";
 import { refreshTokenUtil } from "@/utils/refreshTokenUtil";
 import { useClipboard } from "@vueuse/core";
 import { elPrompt } from "@/utils/elPrompt";
+import { platforms } from "../interfaces/Platform";
+import { i18nUtil } from "@/utils/i18n";
+
+const pageI18n = (name: string) => {
+  return i18nUtil("app.page.detail", name);
+};
 
 const { user }: { user: User } = storeToRefs(useUserStore());
 
@@ -16,7 +21,7 @@ const token = ref({
   refresh: refreshTokenUtil.get() || "",
 });
 
-const { copy: _copy, copied } = useClipboard();
+const { copy: _copy } = useClipboard();
 const copy = (text: string) => {
   _copy(text).then(() => {
     elPrompt.success("复制成功!");
@@ -30,34 +35,43 @@ const copy = (text: string) => {
       <el-image :src="user.preferences.profileImageUrl" alt="" />
     </div>
     <div class="detail-item">
-      <el-text class="label"> 名称：</el-text>
+      <el-text class="label"> {{ pageI18n("label.name") }} </el-text>
       <el-text>
         {{ user?.displayName || "未知" }}
       </el-text>
     </div>
     <div class="detail-item">
-      <el-text class="label">平台：</el-text>
+      <el-text class="label"> {{ pageI18n("label.platform") }} </el-text>
       <el-text>
-        {{ showPlatform(user?.preferences.providers[0].platform) }}
+        {{ platforms[user?.preferences.providers[0].platform] }}
       </el-text>
     </div>
     <div class="detail-item">
-      <el-text class="label">access_token：</el-text>
-      <el-tooltip effect="light" content="点击复制" placement="top">
-        <el-button class="token-text" type="text" @click="copy(token.access)">{{
+      <el-text class="label">
+        {{ pageI18n("label.accessToken") }}
+      </el-text>
+      <el-tooltip
+        effect="light"
+        :content="pageI18n('prompt.clickToCopy')"
+        placement="top"
+      >
+        <el-button class="token-text" link @click="copy(token.access)">{{
           token.access
         }}</el-button>
       </el-tooltip>
     </div>
     <div class="detail-item">
-      <el-text class="label">refresh_token：</el-text>
-      <el-tooltip effect="light" content="点击复制" placement="top">
-        <el-button
-          class="token-text"
-          type="text"
-          @click="copy(token.refresh)"
-          >{{ token.refresh }}</el-button
-        >
+      <el-text class="label">
+        {{ pageI18n("label.refreshToken") }}
+      </el-text>
+      <el-tooltip
+        effect="light"
+        :content="pageI18n('prompt.clickToCopy')"
+        placement="top"
+      >
+        <el-button class="token-text" link @click="copy(token.refresh)">{{
+          token.refresh
+        }}</el-button>
       </el-tooltip>
     </div>
   </div>
@@ -88,16 +102,18 @@ const copy = (text: string) => {
 
     .label {
       width: fit-content();
+
+      &::after {
+        content: ":";
+        margin-right: 10px;
+      }
     }
 
     .token-text {
       width: 500px;
       white-space: nowrap;
       overflow: hidden;
-    }
-
-    .token-text:hover {
-      text-decoration: 1px solid var(--el-border-color);
+      color: var(--el-color-primary);
     }
   }
 }

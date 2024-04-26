@@ -6,6 +6,11 @@ import axios from "axios";
 import { resolvePath } from "@/utils/pathUtil";
 import Vditor from "vditor";
 import { elPrompt } from "@/utils/elPrompt";
+import { i18nUtil } from "@/utils/i18n";
+
+const pageI18n = (name: string) => {
+  return i18nUtil("app.page.translation", name);
+};
 
 const height = (() => {
   const { height } = useWindowSize();
@@ -37,11 +42,11 @@ onMounted(() => {
   <div class="i18n-container">
     <div class="button-container">
       <el-button type="primary" @click="generateLanguageJsonFile">
-        生成翻译文件
+        {{ pageI18n("button.generateLanguageJsonFile") }}
       </el-button>
-      <el-button type="success" @click="openFolder"
-        >打开翻译文件所在位置</el-button
-      >
+      <el-button type="success" @click="openFolder">
+        {{ pageI18n("button.openFolder") }}
+      </el-button>
     </div>
     <el-scrollbar :height="height">
       <div ref="markdown"></div>

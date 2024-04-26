@@ -1,5 +1,221 @@
 {
   "languageLocaleName": "English",
+  "app": {
+    "menu": {
+      "home": "home",
+      "detail": "detail",
+      "timeTrail": "timeTrail",
+      "club": "club",
+      "translation": "translation",
+      "myClub": "myClub",
+      "createClub": "create",
+      "searchClub": "search"
+    },
+    "page": {
+      "detail": {
+        "label": {
+          "name": "name",
+          "platform": "platform",
+          "accessToken": "AccessToken",
+          "refreshToken": "RefreshToken"
+        },
+        "prompt": {
+          "clickToCopy": "Click to copy"
+        }
+      },
+      "clubDetail": {
+        "select": {
+          "clubDetail": "clubDetail",
+          "leaderboard": "leaderboard"
+        },
+        "title": {
+          "clubInfo": "clubInfo",
+          "championship": "championship"
+        },
+        "clubInfo": {
+          "label": {
+            "clubName": "clubName",
+            "clubID": "clubID",
+            "ownerName": "ownerName",
+            "accessLevel": "accessLevel",
+            "description": "description",
+            "count": "count",
+            "like": "like",
+            "dislike": "dislike",
+            "createDate": "createDate"
+          },
+          "prompt": {
+            "clickToViewDescription": "clickToViewDescription"
+          }
+        },
+        "championship": {
+          "label": {
+            "name": "name",
+            "isHardcoreDamageEnabled": "isHardcoreDamageEnabled",
+            "isAssistsAllowed": "isAssistsAllowed",
+            "isTuningAllowed": "isTuningAllowed"
+          },
+          "isHardcoreDamageEnabled": {
+            "true": "true",
+            "false": "false"
+          },
+          "isAssistsAllowed": {
+            "true": "true",
+            "false": "false"
+          },
+          "isTuningAllowed": {
+            "true": "true",
+            "false": "false"
+          }
+        },
+        "leaderboard": {
+          "selectShowOptions": {
+            "stageLeaderboard": "stageLeaderboard",
+            "locationTotalTimeLeaderboard": "locationTotalTimeLeaderboard",
+            "locationFinishedStageCount": "locationFinishedStageCount"
+          },
+          "prompt": {
+            "onlyLoaded": "onlyLoaded",
+            "scrollWheelToMove": "scrollWheelToMove"
+          },
+          "columnName": {
+            "rank": "rank",
+            "name": "name",
+            "time": "time",
+            "differenceToFirst": "differenceToFirst",
+            "finishedStageCount": "finishedStageCount"
+          }
+        },
+        "weatherSeason": {
+          "Summer": "Summer",
+          "Winter": "Winter",
+          "Autumn": "Autumn",
+          "Spring": "Spring"
+        },
+        "weatherAndSurface": {
+          "Clear (Dry)": "Clear (Dry)",
+          "Partly Cloudy (Dry)": "Partly Cloudy (Dry)",
+          "Partly Cloudy (Wet)": "Partly Cloudy (Wet)",
+          "Cloudy (Dry)": "Cloudy (Dry)",
+          "Cloudy (Wet)": "Cloudy (Wet)",
+          "Cloudy (Snow)": "Cloudy (Snow)",
+          "Overcast (Wet)": "Overcast (Wet)",
+          "Overcast (Dry)": "Overcast (Dry)",
+          "Light Rain (Wet)": "Light Rain (Wet)",
+          "Heavy Rain (Wet)": "Heavy Rain (Wet)",
+          "Storm (Wet)": "Storm (Wet)"
+        }
+      },
+      "clubCreate": {
+        "platform": {
+          "CrossPlatform": "CrossPlatform",
+          "Xbox": "Xbox",
+          "PSN": "PSN",
+          "PC": "PC",
+          "Steam": "Steam"
+        },
+        "accessLevel":{
+          "Open": "Open",
+          "FriendsOnly": "FriendsOnly"
+        },
+        "formLabel": {
+          "clubName": "clubName",
+          "description": "description",
+          "platform": "platform",
+          "accessLevel": "accessLevel",
+          "Discord": "Discord",
+          "Twitch": "Twitch",
+          "YouTube": "YouTube",
+          "autoClear": "autoClear"
+        },
+        "button": {
+          "clear": "clear",
+          "create": "create"
+        }
+      },
+      "clubMe": {
+        "columnName": {
+          "clubName": "ClubName",
+          "ownerName": "OwnerName",
+          "platform": "Platform",
+          "memberCount": "count",
+          "operation": "Operation"
+        },
+        "button": {
+          "leave": "leave",
+          "copy": "copy",
+          "close": "close"
+        },
+        "prompt": {
+          "copySuccess": "Copy successfully!"
+        },
+        "platform": {
+          "CrossPlatform": "CrossPlatform",
+          "Xbox": "Xbox",
+          "PSN": "PSN",
+          "PC": "PC",
+          "Steam": "Steam"
+        }
+      },
+      "clubSearch": {
+        "inputPrompt": "ClubName",
+        "sortByLabel": "sort",
+        "sortBy": {
+          "creationDate": "creationDate",
+          "memberCount": "memberCount",
+          "likes": "likes"
+        },
+        "orderBy": {
+          "asc": "asc",
+          "desc": "desc"
+        },
+        "columnName": {
+          "clubName": "clubName",
+          "ownerName": "ownerName",
+          "platform": "platform",
+          "count": "count",
+          "operation": "operation",
+          "like": "like",
+          "dislike": "dislike"
+        },
+        "button": {
+          "search": "search",
+          "join": "join",
+          "close": "close",
+          "leave": "leave",
+          "copy": "copy"
+        }
+      },
+      "timeTrail": {
+        "selectHeader": {
+          "selectLocation": "selectLocation",
+          "selectStage": "selectStage",
+          "selectVehicleClass": "selectVehicleClass",
+          "selectSurfaceCondition": "selectSurfaceCondition",
+          "selectPlatform": "selectPlatform"
+        },
+        "platform": {
+          "CrossPlatform": "CrossPlatform",
+          "Xbox": "Xbox",
+          "PSN": "PSN",
+          "PC": "PC",
+          "Steam": "Steam"
+        },
+        "columnName": {
+          "rank": "rank",
+          "name": "name",
+          "time": "time",
+          "differenceToFirst": "differenceToFirst"
+        }
+      },
+      "translation": {
+        "button": {
+          "generateLanguageJsonFile": "generateLanguageJsonFile",
+          "openFolder": "openFolder"
+        }
+      }
+    }
+  },
   "wrc": {
     "location": {
       "Rallye Monte-Carlo": "Rallye Monte-Carlo",
@@ -133,7 +349,7 @@
       "La Bollène-Vésubie - Peïra Cava": "La Bollène-Vésubie - Peïra Cava",
       "Peïra Cava - La Bollène-Vésubie": "Peïra Cava - La Bollène-Vésubie",
       "La Bollène-Vésubie - Col de Turini": "La Bollène-Vésubie - Col de Turini",
-      "Pra d'Alart": "Pra d'Alart",
+      "Pra d Alart": "Pra d Alart",
       "La Maïris": "La Maïris",
       "Baisse de Patronel": "Baisse de Patronel",
       "Saint-Léger-les-Mélèzes - La Bâtie-Neuve": "Saint-Léger-les-Mélèzes - La Bâtie-Neuve",
@@ -150,7 +366,7 @@
       "Aiguamúrcia": "Aiguamúrcia",
       "Alforja": "Alforja",
       "Les Irles": "Les Irles",
-      "L'Argentera": "L'Argentera",
+      "L Argentera": "L Argentera",
       "Les Voltes": "Les Voltes",
       "Montclar": "Montclar",
       "Botareli": "Botareli",

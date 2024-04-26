@@ -6,6 +6,8 @@ import ChannelKey from "./ChannelKey.ts";
 import * as Path from "path";
 
 process.env.DIST = path.join(__dirname, "../dist");
+// 关闭安全策略警告
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "false";
 process.env.VITE_PUBLIC = app.isPackaged
   ? process.env.DIST
   : path.join(process.env.DIST, "../public");

@@ -4,8 +4,13 @@ import { Club, Role } from "@/interfaces/Club.ts";
 import getPageSizes from "@/utils/getPageSizes.ts";
 import { closeClub, joinClub, leaveClub, pageMyClubs } from "@/api/clubApi.ts";
 import { useClipboard, useWindowSize } from "@vueuse/core";
-import { showPlatform } from "@/interfaces/Platform.ts";
+import { platforms } from "@/interfaces/Platform.ts";
 import { elPrompt } from "@/utils/elPrompt.ts";
+import { i18nUtil } from "@/utils/i18n";
+
+const pageI18n = (name: string) => {
+  return i18nUtil("app.page.clubMe", name);
+};
 
 const loading = ref(false);
 const myClubs: Ref<Club[]> = ref([]);
@@ -81,7 +86,7 @@ const copy = (() => {
     copy(
       `[${clubName}](https://racenet.com/ea_sports_wrc/clubs/${clubID})`,
     ).then(() => {
-      elPrompt.success("复制成功！");
+      elPrompt.success(pageI18n("prompt.copySuccess"));
     });
   };
 })();
@@ -102,7 +107,7 @@ const tableHeight = (() => {
     >
       <el-table-column
         prop="clubName"
-        label="俱乐部名称"
+        :label="pageI18n('columnName.clubName')"
         width="130"
         fixed="left"
       >
@@ -117,45 +122,56 @@ const tableHeight = (() => {
           </router-link>
         </template>
       </el-table-column>
-      <el-table-column prop="ownerDisplayName" label="所属" width="100">
+      <el-table-column
+        prop="ownerDisplayName"
+        :label="pageI18n('columnName.ownerName')"
+        width="140"
+      >
         <template #default="scope">
-          <el-text class="nowrap-hidden" type="info">{{
+          <el-text class="nowrap-hidden">{{
             scope.row.ownerDisplayName
           }}</el-text>
         </template>
       </el-table-column>
-      <el-table-column prop="platfom" label="平台" width="80">
+      <el-table-column
+        prop="platform"
+        :label="pageI18n('columnName.platform')"
+        width="120"
+      >
         <template #default="scope">
-          {{ showPlatform(scope.row.platform) }}
+          <el-text class="nowrap-hidden">
+            {{ pageI18n(`platform.${platforms[scope.row.platform]}`) }}
+          </el-text>
         </template>
       </el-table-column>
-      <el-table-column prop="activeMemberCount" label="人数" width="60" />
-      <el-table-column prop="likeCount" label="点赞" width="60" />
-      <el-table-column prop="dislikeCount" label="点踩" width="60" />
-      <el-table-column fixed="right" width="160" label="操作">
+      <el-table-column
+        prop="activeMemberCount"
+        :label="pageI18n('columnName.memberCount')"
+        min-width="70"
+      />
+      <el-table-column
+        fixed="right"
+        width="180"
+        :label="pageI18n('columnName.operation')"
+      >
         <template #default="scope">
           <el-button
             v-if="scope.row.role === Role.OWNER"
             type="danger"
             @click="close(scope.row.clubID)"
           >
-            解散
+            {{ pageI18n("button.close") }}
           </el-button>
           <el-button
             v-if="scope.row.role === Role.MEMBER"
             type="warning"
             @click="leave(scope.row.clubID)"
           >
-            退出
+            {{ pageI18n("button.leave") }}
           </el-button>
-          <el-button
-            v-if="scope.row.role === Role.NO_JOIN"
-            type="success"
-            @click="join(scope.row.clubID)"
-          >
-            加入
+          <el-button type="success" @click="copy(scope.row)">
+            {{ pageI18n("button.copy") }}
           </el-button>
-          <el-button type="success" @click="copy(scope.row)"> 复制</el-button>
         </template>
       </el-table-column>
     </el-table>

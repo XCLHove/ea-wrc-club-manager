@@ -1,5 +1,233 @@
 {
   "languageLocaleName": "简体中文",
+  "app": {
+    "menu": {
+      "home": "首页",
+      "detail": "个人信息",
+      "timeTrail": "计时赛",
+      "club": "俱乐部",
+      "translation": "帮助翻译",
+      "myClub": "我的",
+      "createClub": "创建",
+      "searchClub": "搜索"
+    },
+    "page": {
+      "detail": {
+        "label": {
+          "name": "名称",
+          "platform": "平台",
+          "accessToken": "访问令牌",
+          "refreshToken": "刷新令牌"
+        },
+        "prompt": {
+          "clickToCopy": "单击复制"
+        }
+      },
+      "clubDetail": {
+        "select": {
+          "clubDetail": "俱乐部详情",
+          "leaderboard": "排行榜"
+        },
+        "title": {
+          "clubInfo": "俱乐部信息",
+          "championship": "赛事信息"
+        },
+        "clubInfo": {
+          "label": {
+            "clubName": "俱乐部名称",
+            "clubID": "俱乐部ID",
+            "ownerName": "所属",
+            "accessLevel": "访问权限",
+            "description": "描述",
+            "count": "人数",
+            "like": "点赞",
+            "dislike": "点踩",
+            "createDate": "创建日期"
+          },
+          "prompt": {
+            "clickToViewDescription": "单击查看描述"
+          }
+        },
+        "championship": {
+          "label": {
+            "name": "名称",
+            "isHardcoreDamageEnabled": "拟真损伤",
+            "isAssistsAllowed": "辅助功能",
+            "isTuningAllowed": "调教车辆"
+          },
+          "isHardcoreDamageEnabled": {
+            "true": "是",
+            "false": "否"
+          },
+          "isAssistsAllowed": {
+            "true": "允许",
+            "false": "不允许"
+          },
+          "isTuningAllowed": {
+            "true": "允许",
+            "false": "不允许"
+          }
+        },
+        "leaderboard": {
+          "selectShowOptions": {
+            "stageLeaderboard": "赛段排行榜",
+            "locationTotalTimeLeaderboard": "分站总时间排行榜",
+            "locationFinishedStageCount": "分站完成赛段数"
+          },
+          "prompt": {
+            "onlyLoaded": "仅统计已加载赛段",
+            "scrollWheelToMove": "滚动鼠标滚轮左右移动"
+          },
+          "columnName": {
+            "rank": "排名",
+            "name": "名称",
+            "time": "时间",
+            "differenceToFirst": "差时",
+            "finishedStageCount": "完成赛段数"
+          }
+        },
+        "weatherSeason": {
+          "Spring": "春季",
+          "Summer": "夏季",
+          "Autumn": "秋季",
+          "Winter": "冬季"
+        },
+        "weatherAndSurface": {
+          "Clear (Dry)": "晴天（干燥）",
+          "Partly Cloudy (Dry)": "部分多云（干燥）",
+          "Partly Cloudy (Wet)": "部分多云（湿）",
+          "Cloudy (Dry)": "多云（干燥）",
+          "Cloudy (Wet)": "多云（湿）",
+          "Cloudy (Snow)": "多云（雪）",
+          "Overcast (Wet)": "阴天（干燥）",
+          "Overcast (Dry)": "阴天（湿）",
+          "Overcast (Snow)": "阴天（雪）",
+          "Light Rain (Wet)": "小雨（湿）",
+          "Heavy Rain (Wet)": "大雨（湿）",
+          "Storm (Wet)": "暴风雨（湿）"
+        }
+      },
+      "clubCreate": {
+        "formLabel": {
+          "clubName": "俱乐部名称",
+          "description": "俱乐部描述",
+          "platform": "平台",
+          "accessLevel": "访问限制",
+          "Discord": "Discord",
+          "Twitch": "Twitch",
+          "YouTube": "YouTube",
+          "autoClear": "自动清空"
+        },
+        "platform": {
+          "CrossPlatform": "跨平台",
+          "Xbox": "Xbox",
+          "PSN": "PSN",
+          "PC": "PC",
+          "Steam": "Steam"
+        },
+        "accessLevel":{
+          "Open": "公开",
+          "FriendsOnly": "仅好友"
+        },
+        "button": {
+          "clear": "清空",
+          "create": "创建"
+        }
+      },
+      "clubMe": {
+        "columnName": {
+          "clubName": "俱乐部名称",
+          "ownerName": "拥有者",
+          "platform": "平台",
+          "memberCount": "成员数",
+          "operation": "操作"
+        },
+        "button": {
+          "leave": "退出",
+          "copy": "复制",
+          "close": "解散"
+        },
+        "prompt": {
+          "copySuccess": "复制成功！"
+        },
+        "platform": {
+          "CrossPlatform": "跨平台",
+          "Xbox": "Xbox",
+          "PSN": "PSN",
+          "PC": "PC",
+          "Steam": "Steam"
+        }
+      },
+      "clubSearch": {
+        "inputPrompt": "俱乐部名称",
+        "sortByLabel": "排序",
+        "sortBy": {
+          "creationDate": "创建日期",
+          "memberCount": "成员数量",
+          "likes": "点赞数量"
+        },
+        "orderBy": {
+          "asc": "正序",
+          "desc": "倒序"
+        },
+        "columnName": {
+          "clubName": "俱乐部名称",
+          "ownerName": "拥有者",
+          "platform": "平台",
+          "count": "人数",
+          "operation": "操作",
+          "like": "点赞",
+          "dislike": "点踩"
+        },
+        "button": {
+          "search": "搜索",
+          "join": "加入",
+          "close": "解散",
+          "leave": "退出",
+          "copy": "复制"
+        }
+      },
+      "timeTrail": {
+        "selectHeader": {
+          "selectLocation": "选择分站",
+          "selectStage": "选择赛段",
+          "selectVehicleClass": "选择车辆组别",
+          "selectSurfaceCondition": "选择路面情况",
+          "selectPlatform": "选择平台"
+        },
+        "platform": {
+          "CrossPlatform": "跨平台",
+          "Xbox": "Xbox",
+          "PSN": "PSN",
+          "PC": "PC",
+          "Steam": "Steam"
+        },
+        "columnName": {
+          "rank": "排名",
+          "name": "名称",
+          "time": "时间",
+          "differenceToFirst": "差时"
+        }
+      },
+      "translation": {
+        "button": {
+          "generateLanguageJsonFile": "生成翻译文件",
+          "openFolder": "打开翻译文件所在位置"
+        }
+      }
+    },
+    "component": {
+      "header": {
+        "avatar": {
+          "defaultContent": "登录",
+          "dropdownOption": {
+            "login": "登录",
+            "logout": "退出"
+          }
+        }
+      }
+    }
+  },
   "wrc": {
     "location": {
       "Rallye Monte-Carlo": "蒙特卡洛",
@@ -133,7 +361,7 @@
       "La Bollène-Vésubie - Peïra Cava": "拉博莱讷 - 佩拉卡瓦",
       "Peïra Cava - La Bollène-Vésubie": "佩拉卡瓦 - 拉博莱讷",
       "La Bollène-Vésubie - Col de Turini": "拉博莱讷 - 图里尼山口",
-      "Pra d'Alart": "普拉达拉特",
+      "Pra d Alart": "普拉达拉特",
       "La Maïris": "拉迈里斯",
       "Baisse de Patronel": "巴伊斯德帕特罗内尔",
       "Saint-Léger-les-Mélèzes - La Bâtie-Neuve": "圣莱热莱梅莱泽 - 拉巴蒂纽夫",
@@ -150,7 +378,7 @@
       "Aiguamúrcia": "艾瓜穆尔西亚",
       "Alforja": "阿尔福尔哈",
       "Les Irles": "勒伊尔",
-      "L'Argentera": "拉尔真特拉",
+      "L Argentera": "拉尔真特拉",
       "Les Voltes": "勒斯沃尔特斯",
       "Montclar": "蒙克拉尔",
       "Botareli": "博塔雷利",
@@ -245,8 +473,8 @@
     },
     "vehicleClass": {
       "WRC": "世界拉力车",
-      "WRC2": "世界拉力车2",
-      "JWRC": "青年世界拉力锦标赛",
+      "WRC2": "世界拉力车 2",
+      "JWRC": "青年组",
       "World Rally Car 2017 - 2021": "世界拉力车 2017 - 2021",
       "Rally2": "拉力2",
       "Rally4": "拉力4",

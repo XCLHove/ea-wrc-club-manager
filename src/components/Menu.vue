@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { menuItems } from "@/router/router.ts";
+import { i18nUtil } from "@/utils/i18n.ts";
 
 const defaultActive = computed(() => {
   return window.location.hash.replace(/^#(.*)\?.*/, "$1");
 });
+
+const menuPageI18n = (name: string) => {
+  return i18nUtil("app.menu", name);
+};
 </script>
 
 <template>
@@ -15,16 +20,16 @@ const defaultActive = computed(() => {
           v-if="!item.children"
           :index="item.path"
           :key="item.order"
-          >{{ item.title }}</el-menu-item
+          >{{ menuPageI18n(item.title) }}</el-menu-item
         >
         <el-sub-menu v-if="item.children" :index="item.path" :key="item.path">
-          <template #title>{{ item.title }}</template>
+          <template #title>{{ menuPageI18n(item.title) }}</template>
           <el-menu-item
             v-for="child in item.children"
             :key="child.order"
             :index="child.path"
           >
-            {{ child.title }}
+            {{ menuPageI18n(child.title) }}
           </el-menu-item>
         </el-sub-menu>
       </div>
