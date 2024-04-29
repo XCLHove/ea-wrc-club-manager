@@ -575,7 +575,9 @@ const saveFinishedStageCountAsExcel = () => {
                 :label="`${index + 1} - ${showSelectStageLabel(stage)}`"
                 @click="setCurrentStage(stage)"
               >
-                {{ `${index + 1} - ${showSelectStageLabel(stage)}` }}
+                {{
+                  `${index + 1} - ${showSelectStageLabel(stage)} - ${stage.stageSettings.distance}km`
+                }}
               </el-radio-button>
             </div>
           </el-scrollbar>
