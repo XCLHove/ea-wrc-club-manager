@@ -25,6 +25,7 @@ import { Platform } from "@/interfaces/Platform";
 import { LeaderboardItem } from "@/interfaces/ChampionshipStageLeaderboard";
 import { elPrompt } from "@/utils/elPrompt";
 import { exportToExcel } from "@/views/exportToExcel";
+import Analysis from "@/components/Analysis.vue";
 
 const pageI18n = (name: string) => {
   return i18nUtil("app.page.clubDetail", name);
@@ -389,6 +390,24 @@ const saveFinishedStageCountAsExcel = () => {
   );
   exportToExcel(fileName, sheetName, currentLocation.value.totalFinishCount);
 };
+
+const analysis = (item: LeaderboardItem) => {
+  analysisData.value.leaderboardId = item.leaderboardId;
+  analysisData.value.playerId = item.wrcPlayerId;
+  analysisData.value.location = showSelectLocationLabel(currentLocation.value);
+  analysisData.value.stage = showSelectStageLabel(currentStage.value);
+  analysisData.value.car = item.vehicle;
+
+  visibleAnalysis.value = true;
+};
+const analysisData = ref({
+  leaderboardId: "",
+  playerId: "",
+  location: "",
+  stage: "",
+  car: "",
+});
+const visibleAnalysis = ref(false);
 </script>
 
 <template>
@@ -398,6 +417,10 @@ const saveFinishedStageCountAsExcel = () => {
         {{ dialogText }}
       </el-text>
     </el-dialog>
+    <Analysis
+      v-model:data="analysisData"
+      v-model:visible="visibleAnalysis"
+    ></Analysis>
     <div class="select-page">
       <el-radio-group v-model="showLeaderboard">
         <el-radio-button :value="false">
@@ -635,6 +658,13 @@ const saveFinishedStageCountAsExcel = () => {
           >
             <template #default="scope">
               {{ scope.row?.differenceToFirst?.substring(0, 12) }}
+            </template>
+          </el-table-column>
+          <el-table-column width="90" fixed="right">
+            <template #default="scope">
+              <el-button type="success" @click="analysis(scope.row)"
+                >分析</el-button
+              >
             </template>
           </el-table-column>
         </el-table>

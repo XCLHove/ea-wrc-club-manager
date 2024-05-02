@@ -4,6 +4,7 @@ import { Order, SortBy } from "@/interfaces/Search.ts";
 import { ClubDetail, Championship } from "@/interfaces/ClubDetail.ts";
 import { ChampionshipStageLeaderboard } from "@/interfaces/ChampionshipStageLeaderboard.ts";
 import { Platform } from "@/interfaces/Platform.ts";
+import { PerformanceData } from "@/interfaces/PerformanceData.ts";
 
 export const pageMyClubs = ({
   page,
@@ -165,3 +166,32 @@ export const getChampionship = (championshipID: string) => {
       return data;
     });
 };
+
+export const performanceAnalysis = (() => {
+  const cache = new Map<string, PerformanceData>();
+
+  return ({
+    leaderboardId,
+    playerId,
+  }: {
+    leaderboardId: string;
+    playerId: string;
+  }) => {
+    const cacheId = `${leaderboardId}-${playerId}`;
+    if (cache.has(cacheId)) {
+      return Promise.resolve(cache.get(cacheId));
+    }
+
+    return request
+      .get("/wrc2023Stats/performanceAnalysis/ghost", {
+        params: {
+          WrcRivalLeaderboardId: leaderboardId,
+          WrcRivalPlayerId: playerId,
+        },
+      })
+      .then(({ data }) => {
+        cache.set(cacheId, data);
+        return data;
+      }) as Promise<PerformanceData>;
+  };
+})();

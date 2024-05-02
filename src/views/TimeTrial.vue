@@ -3,7 +3,13 @@ import {
   getStatsValues,
   timeTrialLeaderBoard,
 } from "@/api/timeTrialLeaderBoardApi";
-import { StatsValues, SurfaceConditions } from "@/interfaces/StatsValues.ts";
+import {
+  OrderedLocation,
+  OrderedVehicleClass,
+  StatsValues,
+  SurfaceConditions,
+  Vehicles,
+} from "@/interfaces/StatsValues.ts";
 import { computed, onMounted, Ref, ref, watch } from "vue";
 import {
   TimeTrialEntry,
@@ -16,6 +22,7 @@ import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
 import { i18nUtil } from "@/utils/i18n.ts";
 import { elPrompt } from "@/utils/elPrompt";
+import Analysis from "@/components/Analysis.vue";
 
 const pageI18n = (name: string) => {
   return i18nUtil("app.page.timeTrail", name);
@@ -36,25 +43,44 @@ const getTableRowStyle = ({ row }: { row: TimeTrialEntry }) => {
 const statsValues = ref<StatsValues>();
 onMounted(async () => {
   statsValues.value = await getStatsValues();
-  setCurrentLocationID(statsValues.value?.orderedLocations[0].id);
-  params.value.vehicleClassID = statsValues.value?.orderedVehicleClasses[0].id;
+  setCurrentLocation(statsValues.value?.orderedLocations[0]);
+  setCurrentVehicleClass(statsValues.value?.orderedVehicleClasses[0]);
   setSurfaceConditions(statsValues.value?.surfaceConditions);
   getLeaderboard();
 });
 
 const currentLocationID = ref("");
-const currentLocationStages = ref<{ id: string; value: string }[]>([]);
-const setCurrentLocationID = (locationID: string) => {
-  currentLocationID.value = locationID;
+type TypeStage = { id: string; value: string };
+const currentLocationStages = ref<TypeStage[]>([]);
+const setCurrentLocation = (location: OrderedLocation) => {
+  currentLocation = location;
+  currentLocationID.value = location.id;
 
   currentLocationStages.value = [];
-  statsValues.value?.locationRoute[locationID].forEach((i) => {
+  statsValues.value?.locationRoute[location.id].forEach((i) => {
     currentLocationStages.value.push({
       id: i,
       value: statsValues.value?.routes[i],
     });
   });
-  params.value.stageID = currentLocationStages.value[0].id;
+  setCurrentStage(currentLocationStages.value[0]);
+};
+
+let currentStage: TypeStage = null;
+let currentLocation: OrderedLocation = null;
+let currentVehicleClass: OrderedVehicleClass = null;
+let currentSurfaceCondition: TypeSurfaceCondition = null;
+const setCurrentStage = (stage: TypeStage) => {
+  currentStage = stage;
+  params.value.stageID = stage.id;
+};
+const setCurrentVehicleClass = (vehicleClass: OrderedVehicleClass) => {
+  currentVehicleClass = vehicleClass;
+  params.value.vehicleClassID = vehicleClass.id;
+};
+const setCurrentSurfaceCondition = (surfaceCondition: TypeSurfaceCondition) => {
+  currentSurfaceCondition = surfaceCondition;
+  params.value.surfaceConditionID = surfaceCondition.id;
 };
 
 const leaderboard = ref<TimeTrialStageLeaderboard>({
@@ -89,7 +115,8 @@ const getLeaderboard = () => {
     });
 };
 
-const surfaceConditions = ref<{ id: string; value: string }[]>([]);
+type TypeSurfaceCondition = { id: string; value: string };
+const surfaceConditions = ref<TypeSurfaceCondition[]>([]);
 const setSurfaceConditions = (_surfaceConditions: SurfaceConditions) => {
   for (const id in _surfaceConditions) {
     surfaceConditions.value.push({
@@ -97,7 +124,7 @@ const setSurfaceConditions = (_surfaceConditions: SurfaceConditions) => {
       value: _surfaceConditions[id],
     });
   }
-  params.value.surfaceConditionID = surfaceConditions.value[0].id;
+  setCurrentSurfaceCondition(surfaceConditions.value[0]);
 };
 
 const page = ref({
@@ -120,10 +147,42 @@ watch(
     getLeaderboard();
   },
 );
+
+const analysis = (item: TimeTrialEntry) => {
+  analysisData.value.leaderboardId = item.leaderboardId;
+  analysisData.value.playerId = item.wrcPlayerId;
+  analysisData.value.location = i18nUtil("wrc.location", currentLocation.value);
+  analysisData.value.location += " - ";
+  analysisData.value.location += i18nUtil(
+    "wrc.vehicleClass",
+    currentVehicleClass.value,
+  );
+  analysisData.value.stage = i18nUtil("wrc.stage", currentStage.value);
+  analysisData.value.stage += " - ";
+  analysisData.value.stage += i18nUtil(
+    "wrc.surfaceCondition",
+    currentSurfaceCondition.value,
+  );
+  analysisData.value.car = item.vehicle;
+
+  visibleAnalysis.value = true;
+};
+const analysisData = ref({
+  leaderboardId: "",
+  playerId: "",
+  location: "",
+  stage: "",
+  car: "",
+});
+const visibleAnalysis = ref(false);
 </script>
 
 <template>
   <div class="time-trial-container">
+    <Analysis
+      v-model:data="analysisData"
+      v-model:visible="visibleAnalysis"
+    ></Analysis>
     <div class="options">
       <el-select v-model="currentLocationID" :disabled="loading">
         <template #header>
@@ -135,7 +194,7 @@ watch(
           v-for="location in statsValues?.orderedLocations"
           :label="i18nUtil('wrc.location', location.value)"
           :value="location.id"
-          @click="setCurrentLocationID(location.id)"
+          @click="setCurrentLocation(location)"
         />
       </el-select>
       <el-select v-model="params.stageID" :disabled="loading">
@@ -148,6 +207,7 @@ watch(
           v-for="stage in currentLocationStages"
           :label="i18nUtil('wrc.stage', stage.value)"
           :value="stage.id"
+          @click="setCurrentStage(stage)"
         />
       </el-select>
     </div>
@@ -174,6 +234,7 @@ watch(
           v-for="surfaceCondition in surfaceConditions"
           :value="surfaceCondition.id"
           :label="i18nUtil('wrc.surfaceCondition', surfaceCondition.value)"
+          @click="setCurrentSurfaceCondition(surfaceCondition)"
         />
       </el-select>
       <el-select v-model="params.platform" :disabled="loading">
@@ -219,6 +280,13 @@ watch(
         >
           <template #default="scope">
             {{ scope.row.time.substring(0, 12) }}
+          </template>
+        </el-table-column>
+        <el-table-column width="90" fixed="right">
+          <template #default="scope">
+            <el-button type="success" @click="analysis(scope.row)"
+              >分析</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
