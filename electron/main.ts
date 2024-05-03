@@ -1,9 +1,5 @@
-import { app, BrowserWindow, Menu, session, ipcMain, shell } from "electron";
+import { app, BrowserWindow } from "electron";
 import path from "node:path";
-import { optimizer } from "@electron-toolkit/utils";
-import axios from "axios";
-import ChannelKey from "./ChannelKey.ts";
-import * as Path from "path";
 
 process.env.DIST = path.join(__dirname, "../dist");
 // 关闭安全策略警告
@@ -13,7 +9,6 @@ process.env.VITE_PUBLIC = app.isPackaged
   : path.join(process.env.DIST, "../public");
 
 let win: BrowserWindow | null;
-let loginWin: BrowserWindow | null;
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 
@@ -31,11 +26,13 @@ function createWindow() {
     win.loadFile(path.join(process.env.DIST, "index.html"));
   }
 
-  // F12 打开/关闭开发者模式
-  optimizer.watchWindowShortcuts(win);
-
-  // 关闭默认菜单
-  Menu.setApplicationMenu(null);
+  const handlers = import.meta.glob("./mainHandlers/*.ts", {
+    eager: true,
+    import: "default",
+  });
+  Object.entries(handlers).forEach(([_, handler]) => {
+    (handler as Function)(win);
+  });
 }
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -58,79 +55,4 @@ app.on("activate", () => {
 
 app.whenReady().then(() => {
   createWindow();
-
-  // tokenApi
-  (() => {
-    const refreshTokenCookieName = "RACENET-REFRESH-TOKEN";
-    const apiUrl = "https://web-api.racenet.com";
-
-    session.defaultSession.cookies.addListener("changed", (_, cookie) => {
-      if (cookie.name !== refreshTokenCookieName) return;
-      win?.webContents.send(ChannelKey.ON_CHANGE_REFRESH_TOKEN, cookie);
-    });
-
-    ipcMain.on(ChannelKey.REMOVE_REFRESH_TOKEN, async () => {
-      await session.defaultSession.cookies.remove(
-        apiUrl,
-        refreshTokenCookieName,
-      );
-    });
-
-    ipcMain.handle(
-      ChannelKey.REFRESH_TOKEN,
-      async (_, refreshToken: string) => {
-        return await axios
-          .post(
-            `${apiUrl}/api/identity/refresh-auth`,
-            {
-              redirectUri: "https://racenet.com/oauthCallback",
-              clientId: "RACENET_1_JS_WEB_APP",
-              grantType: "refresh_token",
-            },
-            {
-              headers: {
-                Cookie: `${refreshTokenCookieName}=${refreshToken}`,
-                Origin: "https://racenet.com",
-                Referer: "https://racenet.com/",
-              },
-            },
-          )
-          .then(({ data, status }) => {
-            if (status !== 200) return {};
-            const { access_token, refresh_token } = data;
-            return {
-              accessToken: access_token,
-              refreshToken: refresh_token,
-            };
-          });
-      },
-    );
-
-    ipcMain.on(ChannelKey.OPEN_LOGIN_WINDOW, () => {
-      if (!win) return;
-      if (loginWin) {
-        loginWin.focus();
-        return;
-      }
-      loginWin = new BrowserWindow({ parent: win, modal: true, show: true });
-      loginWin.loadURL("https://racenet.com");
-
-      const onCloseListener = () => {
-        win?.webContents.send(ChannelKey.CLOSE_LOGIN_WINDOW);
-        loginWin?.off("closed", onCloseListener);
-        loginWin = null;
-      };
-      loginWin.on("close", onCloseListener);
-    });
-
-    ipcMain.on(ChannelKey.CLOSE_LOGIN_WINDOW, () => {
-      if (!loginWin) return;
-      loginWin.close();
-    });
-  })();
-
-  ipcMain.on(ChannelKey.OPEN_FOLDER, (_, path = ".") => {
-    path = Path.join(app.getAppPath().replace("app.asar", ""), path);
-    shell.openPath(path);
-  });
 });

@@ -27,7 +27,6 @@ export interface TokenApi {
 
 declare global {
   interface Window {
-    /**自定义api*/
     tokenApi: TokenApi;
   }
 }

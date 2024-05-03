@@ -30,7 +30,8 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "electron"
+    "electron",
+    "electron/**/*.ts",
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
