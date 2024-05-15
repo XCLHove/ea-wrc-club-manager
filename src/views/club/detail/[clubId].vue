@@ -144,8 +144,13 @@ const setCurrentChampionship = (championship: Championship) => {
 const setCurrentLocation = (location: NewLocation) => {
   currentLocation.value = location;
   currentLocationID.value = location.id;
+
+  currentLocationFinishedStageCount.value = [];
+  currentLocationTotalTimeLeaderBoard.value = [];
+
   setCurrentStage(location.stages[0]);
   setCurrentLocationFinishedStageCount(location?.totalFinishCount || []);
+  setCurrentLocationTotalTimeLeaderboard(location?.totalTimeLeaderBoard || []);
 };
 const setCurrentStage = (stage: Stage) => {
   currentStage.value = stage;
@@ -159,6 +164,9 @@ const setCurrentStage = (stage: Stage) => {
 };
 const setCurrentLocationFinishedStageCount = (data: TypeFinishCount[]) => {
   currentLocationFinishedStageCount.value = data;
+};
+const setCurrentLocationTotalTimeLeaderboard = (data: TypeTotalTime[]) => {
+  currentLocationTotalTimeLeaderBoard.value = data;
 };
 const setCurrentStageLeaderboard = (entries: LeaderboardItem[]) => {
   // 保存到赛段信息
