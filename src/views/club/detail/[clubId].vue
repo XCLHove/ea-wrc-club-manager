@@ -2,24 +2,25 @@
 import {
   clubDetail as getClubDetail,
   getChampionship,
+  joinClub,
   stageLeaderboard,
 } from "@/api/clubApi";
 import { useRoute } from "vue-router";
-import { computed, h, onMounted, Ref, ref } from "vue";
+import { computed, onMounted, Ref, ref } from "vue";
 import {
-  ClubDetail,
-  Stage,
-  Location,
   Championship,
+  ClubDetail,
+  Location,
   LocationStatus,
+  Stage,
 } from "@/interfaces/ClubDetail";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/useUserStore.ts";
 import { User } from "@/interfaces/User.ts";
 import { useWindowSize } from "@vueuse/core";
 import { TimeTrialEntry } from "@/interfaces/TimeTrialStageLeaderboard.ts";
-import { accessLevels } from "../../../interfaces/Club";
-import { ElDialog, ElScrollbar, Instance } from "element-plus";
+import { accessLevels, Role } from "../../../interfaces/Club";
+import { ElDialog, ElScrollbar } from "element-plus";
 import { i18nUtil } from "../../../utils/i18n";
 import { Platform } from "@/interfaces/Platform";
 import { LeaderboardItem } from "@/interfaces/ChampionshipStageLeaderboard";
@@ -83,6 +84,9 @@ onMounted(() => {
   getClubDetail(clubId)
     .then((club: ClubDetail) => {
       setClubDetail(club);
+    })
+    .catch(() => {
+      elPrompt.error("获取俱乐部信息失败！");
     })
     .finally(() => {
       loadingClubDetail.value = false;
@@ -416,6 +420,18 @@ const analysisData = ref({
   car: "",
 });
 const visibleAnalysis = ref(false);
+
+const join = (clubId: string) => {
+  loadingClubDetail.value = true;
+  joinClub(clubId)
+    .then(() => {
+      elPrompt.success("加入成功！");
+      window.location.reload();
+    })
+    .catch(() => {
+      elPrompt.error("加入失败！");
+    });
+};
 </script>
 
 <template>
@@ -451,6 +467,14 @@ const visibleAnalysis = ref(false);
             pageI18n("clubInfo.label.clubName")
           }}</el-text>
           <el-text class="font-bold">{{ clubDetail?.clubName }}</el-text>
+          <el-button
+            v-if="clubDetail?.role === Role.NO_JOIN"
+            style="margin-left: 10px"
+            type="primary"
+            link
+            @click="join(clubId)"
+            >加入</el-button
+          >
         </div>
         <div class="info-item">
           <el-text class="label">{{
