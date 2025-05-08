@@ -409,6 +409,7 @@ const analysis = (item: LeaderboardItem) => {
   analysisData.value.location = showSelectLocationLabel(currentLocation.value);
   analysisData.value.stage = showSelectStageLabel(currentStage.value);
   analysisData.value.car = item.vehicle;
+  analysisData.value.distance = currentStage.value.stageSettings.distance;
 
   visibleAnalysis.value = true;
 };
@@ -418,6 +419,7 @@ const analysisData = ref({
   location: "",
   stage: "",
   car: "",
+  distance: 0,
 });
 const visibleAnalysis = ref(false);
 

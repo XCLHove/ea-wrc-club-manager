@@ -11,7 +11,7 @@ const height = (() => {
   const { height } = useWindowSize();
 
   return computed(() => {
-    return height.value - 50;
+    return height.value - 100;
   });
 })();
 
@@ -25,9 +25,21 @@ const data = defineModel<{
   location: string;
   stage: string;
   car: string;
+  distance: number;
 }>("data", {
   required: true,
   default: null,
+});
+const title = computed(() => {
+  let result = "";
+  result += data.value.location;
+  result += data.value.stage;
+  if (data.value.distance) {
+    result += `(${data.value.distance}km)`;
+  }
+  result += `-${data.value.car}`;
+  result = result.replace(/\s-\s/g, "-");
+  return result;
 });
 watch(
   data.value,
@@ -40,7 +52,7 @@ const close = () => {
   visible.value = false;
 };
 
-const gearAnalysisPie = ref<HTMLDivElement>();
+const tyreWearAnalysisLine = ref<HTMLDivElement>();
 const gearAnalysisHistogram = ref<HTMLDivElement>();
 let rivalData = {} as Rival;
 
@@ -61,6 +73,7 @@ const loadData = () => {
     .then((data: PerformanceData) => {
       rivalData = data.data.rival;
       analysisGear();
+      analysisTyreWear();
     })
     .finally(() => {
       loading.value = false;
@@ -68,13 +81,9 @@ const loadData = () => {
 };
 
 const analysisGear = (() => {
-  let gearChartPie: echarts.ECharts = null;
   let gearChartHistogram: echarts.ECharts = null;
 
   return () => {
-    if (!gearChartPie) {
-      gearChartPie = echarts.init(gearAnalysisPie.value);
-    }
     if (!gearChartHistogram) {
       gearChartHistogram = echarts.init(gearAnalysisHistogram.value);
     }
@@ -85,70 +94,111 @@ const analysisGear = (() => {
       map.set(gear, count + 1);
     });
 
-    const pieData = [];
     const histogramData = {
       x: [],
       y: [],
     };
     map.forEach((count, gear) => {
-      pieData.push({
-        value: count,
-        name: gear,
-      });
-
       histogramData.x.push(`${gear}档`);
-      histogramData.y.push(count / rivalData.gear.length);
+      histogramData.y.push((count / rivalData.gear.length) * 100);
+    });
+    const histogramOption: Parameters<typeof gearChartHistogram.setOption>[0] =
+      {
+        xAxis: {
+          data: histogramData.x,
+        },
+        yAxis: {},
+        series: [
+          {
+            type: "bar",
+            data: histogramData.y,
+            label: {
+              show: true,
+              position: "top",
+              textStyle: {
+                fontSize: 10,
+              },
+              formatter: (params) => {
+                return `${params.value.toFixed(2)}%`;
+              },
+            },
+          },
+        ],
+      };
+    gearChartHistogram.setOption(histogramOption);
+  };
+})();
+
+const analysisTyreWear = (() => {
+  let tyreWearChart: echarts.ECharts = null;
+
+  return () => {
+    if (!tyreWearChart) {
+      tyreWearChart = echarts.init(tyreWearAnalysisLine.value);
+    }
+
+    let distance = [];
+    const tyreWear = [];
+    rivalData.tyreWear.forEach((currentTyreWear, index) => {
+      tyreWear.push(100 - currentTyreWear * 100);
+
+      const currentDistance = rivalData.distance[index];
+      distance.push(currentDistance);
+    });
+    const startDistance = distance[0];
+    const endDistance = distance[distance.length - 1];
+    const totalDistance = endDistance - startDistance;
+    distance = distance.map((currentDistance) => {
+      const dis = currentDistance - startDistance;
+      if (dis === 0) return 0;
+      return (dis / totalDistance) * 100;
     });
 
-    const pieOption: Parameters<typeof gearChartPie.setOption>[0] = {
-      title: {
-        text: "档位占比",
-        subtext: `${data.value.location} - ${data.value.stage} - ${data.value.car}`,
-        left: "center",
+    const option: Parameters<typeof tyreWearChart.setOption>[0] = {
+      xAxis: {
+        type: "category",
+        data: distance,
+        axisLabel: {
+          formatter: (value) => {
+            return `${(+value).toFixed(2)}%`;
+          },
+        },
       },
-      tooltip: {
-        trigger: "item",
-        formatter: "{d}%",
+      yAxis: {
+        type: "value",
+        min: Math.ceil(tyreWear[0]),
+        max: Math.ceil(tyreWear[tyreWear.length - 1]),
       },
       series: [
         {
-          name: "档位",
-          type: "pie",
-          radius: "50%",
-          data: pieData,
+          data: tyreWear,
+          type: "line",
+          smooth: true,
           label: {
             show: true,
-            formatter: "{b}档 {d}%",
+            position: "top",
+            textStyle: {
+              fontSize: 10,
+            },
+            formatter: (params) => {
+              return `${params.value.toFixed(2)}%`;
+            },
           },
         },
       ],
     };
-    const histogramOption: Parameters<typeof gearChartPie.setOption>[0] = {
-      xAxis: {
-        data: histogramData.x,
-      },
-      yAxis: {},
-      series: [
-        {
-          type: "bar",
-          data: histogramData.y,
-        },
-      ],
-    };
-
-    gearChartPie.setOption(pieOption);
-    gearChartHistogram.setOption(histogramOption);
+    tyreWearChart.setOption(option);
   };
 })();
 </script>
 
 <template>
   <div>
-    <el-dialog fullscreen @close="close" v-model="visible">
+    <el-dialog fullscreen @close="close" v-model="visible" :title="title">
       <el-scrollbar :height="height">
         <div class="analysis-container" v-loading="loading">
-          <div ref="gearAnalysisPie" class="gear-analysis"></div>
           <div ref="gearAnalysisHistogram" class="gear-analysis"></div>
+          <div ref="tyreWearAnalysisLine" class="tyre-wear-analysis"></div>
         </div>
       </el-scrollbar>
     </el-dialog>
@@ -158,6 +208,10 @@ const analysisGear = (() => {
 <style scoped lang="less">
 .analysis-container {
   .gear-analysis {
+    height: 300px;
+  }
+
+  .tyre-wear-analysis {
     height: 300px;
   }
 }

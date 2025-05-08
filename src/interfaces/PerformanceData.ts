@@ -54,6 +54,7 @@ export interface Rival {
   speed: number[];
   steering: number[];
   throttle: number[];
+  tyreWear: number[];
 }
 
 export interface PerformanceAnalysisMetadata {
