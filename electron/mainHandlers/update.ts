@@ -87,6 +87,7 @@ const update = (win: BrowserWindow) => {
       fs.mkdirSync(dir, { recursive: true })
     }
 
+    const writer = fs.createWriteStream(savePath)
     return new Promise((resolve, reject) => {
       axios({
         method: 'get',
@@ -107,7 +108,6 @@ const update = (win: BrowserWindow) => {
         }),
       })
         .then((response) => {
-          const writer = fs.createWriteStream(savePath)
           response.data.pipe(writer)
           const saveFilePromise = new Promise<void>((resolve, reject) => {
             writer.on('finish', resolve)
@@ -118,6 +118,8 @@ const update = (win: BrowserWindow) => {
         })
         .then(resolve)
         .catch(reject)
+    }).finally(() => {
+      writer.close()
     })
   }
 
