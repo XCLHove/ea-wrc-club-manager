@@ -1,7 +1,7 @@
 {
   "name": "ea-wrc-club-manager",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "scripts": {
     "dev": "vite",
     "build": "node npm-scripts/builld.cjs",

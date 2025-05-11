@@ -51,7 +51,7 @@ const update = (win: BrowserWindow) => {
           ...data,
           available: data.version !== app.getVersion(),
           downloadUrl: data.downloadUrl.filter((item) => {
-            if (!import.meta.env.DEV) return true
+            if (import.meta.env.DEV) return true
             return item.name !== 'dev'
           }),
         }
