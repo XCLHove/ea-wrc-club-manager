@@ -38,7 +38,7 @@ function generateLatestJson() {
       },
       {
         name: 'github',
-        url: `https://github.com/xclhove/ea-wrc-club-manager/releases/latest/download/EA WRC Club Manager-Windows-${version}-Setup.exe`,
+        url: `https://github.com/xclhove/ea-wrc-club-manager/releases/latest/download/EA.WRC.Club.Manager-Windows-${version}-Setup.exe`,
       },
     ],
     description: 'https://gitee.com/xclhove/ea-wrc-club-manager/raw/master/update-log.md',
