@@ -49,8 +49,6 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
-      external: ['xlsx/xlsx.mjs', 'xlsx/dist/cpexcel.full.mjs'],
-    },
+    rollupOptions: {},
   },
 })
