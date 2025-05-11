@@ -6,10 +6,12 @@
       "detail": "个人信息",
       "timeTrail": "计时赛",
       "club": "俱乐部",
+      "update": "检查更新",
       "translation": "帮助翻译",
       "myClub": "我的",
       "createClub": "创建",
-      "searchClub": "搜索"
+      "searchClub": "搜索",
+      "joinClub": "加入"
     },
     "page": {
       "detail": {
@@ -85,6 +87,9 @@
             "time": "时间",
             "differenceToFirst": "差时",
             "finishedStageCount": "完成赛段数"
+          },
+          "rowOperation": {
+            "analysis": "分析"
           }
         },
         "weatherSeason": {
@@ -208,6 +213,9 @@
           "name": "名称",
           "time": "时间",
           "differenceToFirst": "差时"
+        },
+        "rowOperation": {
+          "analysis": "分析"
         }
       },
       "translation": {

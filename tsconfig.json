@@ -23,15 +23,9 @@
     /* path alias */
     "baseUrl": "./",
     "paths": {
-      "@": ["src"],
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "electron",
-    "electron/**/*.ts",
-  ],
+  "include": ["src/**/*.vue","src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "electron", "electron/**/*.ts", "electron/**/*.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

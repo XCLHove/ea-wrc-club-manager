@@ -2,18 +2,18 @@
  * @see https://www.electron.build/configuration/configuration
  */
 {
-  $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  $schema: "electron-builder-schema.json",
   appId: "YourAppID",
   asar: true,
   productName: "EA WRC Club Manager",
   directories: {
-    output: "release/${version}",
+    output: "release/${version}"
   },
   files: ["dist", "dist-electron"],
   "extraFiles": [
     {
       from: "public",
-      to: "resources/public",
+      to: "resources/public"
     },
     {
       from: ".",
@@ -25,14 +25,14 @@
   ],
   mac: {
     target: ["dmg"],
-    artifactName: "${productName}-Mac-${version}-Installer.${ext}",
+    artifactName: "${productName}-Mac-${version}-Installer.${ext}"
   },
   win: {
     target: [
       {
         target: "nsis",
-        arch: ["x64"],
-      },
+        arch: ["x64"]
+      }
     ],
     artifactName: "${productName}-Windows-${version}-Setup.${ext}",
   },
@@ -40,10 +40,10 @@
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,
-    deleteAppDataOnUninstall: false,
+    deleteAppDataOnUninstall: false
   },
   linux: {
     target: ["AppImage"],
-    artifactName: "${productName}-Linux-${version}.${ext}",
-  },
+    artifactName: "${productName}-Linux-${version}.${ext}"
+  }
 }

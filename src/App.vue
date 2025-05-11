@@ -1,95 +1,221 @@
 <template>
-  <div class="layout-container">
-    <!--header-->
-    <div class="header">
-      <Header v-model:is-mobile="isMobile" v-model:show-drawer="showDrawer" />
+  <el-config-provider :locale="zhCn">
+    <router-view v-slot="{ Component, route }">
+      <div style="display: none">
+        {{ setTabComponent(route.path, Component) }}
+      </div>
+    </router-view>
+    <div class="layout-container">
+      <div class="header">
+        <Header />
+      </div>
+      <div class="body">
+        <div class="menu">
+          <el-scrollbar :height="windowHeight - 55">
+            <Menu />
+          </el-scrollbar>
+        </div>
+        <div class="content">
+          <el-tabs v-model="currentTabPath" type="card" closable @tab-remove="closeTab">
+            <el-tab-pane v-for="tab in tabs" :key="tab.path" :label="menuI18n(tab.label)" :name="tab.path" :closable="false">
+              <div class="tab-content" style="height: calc(100vh - 95px); overflow: hidden">
+                <Component :is="getTabComponent(tab.path)" />
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+      </div>
     </div>
-    <!--content-container-->
-    <div class="content-container">
-      <!--menu-->
-      <div class="drawer-menu" v-if="isMobile">
-        <el-drawer
-          v-model="showDrawer"
-          direction="ltr"
-          title="菜单"
-          custom-class="drawer-container"
-          size="150"
-        >
-          <Menu />
-        </el-drawer>
-      </div>
-      <div class="aside-menu" v-else>
-        <Menu />
-      </div>
-      <!--content-->
-      <div class="content">
-        <router-view />
-      </div>
-    </div>
-    <Login />
-  </div>
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">
-import Header from "@/components/Header.vue";
-import { useWindowSize } from "@vueuse/core";
-import { computed, ref } from "vue";
-import Menu from "@/components/Menu.vue";
-import Login from "@/components/Login.vue";
-import { elPrompt } from "@/utils/elPrompt.ts";
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import Header from '@/components/Header.vue'
+import menus, { menuI18n, menuMap } from '@/menus/menus.ts'
+import { computed, defineAsyncComponent, defineComponent, h, onMounted, ref, watch, type Component } from 'vue'
+import { ElMenu, ElMenuItem, ElMessage, ElSubMenu } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
+import { HOME_PATH } from '@/router/router.ts'
+import { useWindowSize } from '@vueuse/core'
+import routerPush from '@/utils/routerPush.ts'
+import { type Menu } from '@/menus/menus.ts'
+import useUpdateStore from '@/stores/useUpdateStore.ts'
 
-const isMobile = computed(
-  (() => {
-    const { width } = useWindowSize();
-    return () => width.value < 500;
-  })(),
-);
-const showDrawer = ref(false);
+const route = useRoute()
+const router = useRouter()
+const { height: windowHeight } = useWindowSize()
+window.addEventListener('copy', () => {
+  ElMessage.success('复制成功!')
+})
+onMounted(() => router.push(HOME_PATH))
 
-window.addEventListener("copy", () => {
-  elPrompt.success("复制成功!");
-});
-</script>
+const Menu = defineComponent({
+  setup() {
+    const menuList = computed(() => [...menus])
 
-<style lang="less" scoped>
-@containerHeight: 100vh;
-@headerHeight: 50px;
-@contentHeight: calc(@containerHeight - @headerHeight);
+    function getMenuVNode(menu: Menu) {
+      if (!menu.getVisible().value) {
+        return null
+      }
 
-.layout-container {
-  width: 100%;
-  height: @containerHeight;
+      if (menu.children.length === 0) {
+        return h(
+          ElMenuItem,
+          {
+            index: menu.path,
+            onClick: () => {
+              routerPush(menu.path, menu.label)
+            },
+          },
+          {
+            default: () => menuI18n(menu.label),
+          },
+        )
+      }
 
-  .header {
-    width: 100%;
-    height: @headerHeight;
-    position: relative;
-    border-bottom: 1px solid var(--el-border-color);
-  }
-
-  .content-container {
-    width: 100%;
-    height: @contentHeight;
-    position: relative;
-    display: flex;
-
-    @asideMenuWidth: 120px;
-    @contentWidth: calc(100% - @asideMenuWidth);
-    .aside-menu {
-      width: @asideMenuWidth;
-      height: @contentHeight;
-      border-right: 1px solid var(--el-border-color);
+      return h(
+        ElSubMenu,
+        {
+          index: menu.path,
+        },
+        {
+          title: () => menuI18n(menu.label),
+          default: () => menu.children.map((child) => getMenuVNode(child)),
+        },
+      )
     }
 
-    .content {
-      width: 100%;
-      position: relative;
-      padding: 10px;
+    return () =>
+      h(
+        ElMenu,
+        {
+          defaultActive: route.path,
+        },
+        {
+          default: () => menuList.value.map((menu) => getMenuVNode(menu)),
+        },
+      )
+  },
+})
 
-      @media screen and (max-width: 500px) {
-        .content {
-          width: 100%;
+type Tab = {
+  path: string
+  label: string
+}
+const homeTab: Tab = {
+  path: HOME_PATH,
+  label: 'home',
+}
+const closableTabs = ref<Tab[]>([])
+const tabs = computed<Tab[]>(() => {
+  return [homeTab, ...closableTabs.value]
+})
+const currentTabPath = ref(route.path)
+
+watch(
+  () => currentTabPath.value,
+  (path) => router.push(path),
+)
+
+router.beforeEach((to, from) => {
+  currentTabPath.value = to.path
+  if (tabs.value.some((tab) => tab.path === to.path)) return true
+
+  let tabLabel = (to.query.tabLabel as string) || to.meta?.tabLabel || menuMap.get(to.path)?.label || to.name || to.path
+  closableTabs.value.push({
+    path: to.path,
+    label: tabLabel as string,
+  })
+})
+
+function closeTab(path: string) {
+  tabs.value.forEach((tab, index) => {
+    if (index === 0) return
+    if (tab.path !== path) return
+    const lastIndex = index - 1
+    currentTabPath.value = tabs.value[lastIndex].path
+
+    closableTabs.value = closableTabs.value.filter((tab) => tab.path !== path)
+    routeComponentCacheMap.delete(path)
+  })
+}
+
+const routeComponentSetterMap = new Map<string, (component: Component) => void>()
+const routeComponentCacheMap = new Map<string, Component>()
+function getTabComponent(path: string) {
+  const cacheComponent = routeComponentCacheMap.get(path)
+  if (cacheComponent) return cacheComponent
+
+  const component = defineAsyncComponent({
+    loader: () =>
+      new Promise<Component>((resolve) => {
+        routeComponentSetterMap.set(path, resolve)
+      }).finally(() => {
+        routeComponentSetterMap.delete(path)
+      }),
+  })
+  routeComponentCacheMap.set(path, component)
+  return component
+}
+function setTabComponent(path: string, component: Component) {
+  const setter = routeComponentSetterMap.get(path)
+  setter?.(component)
+}
+
+// 检查更新
+onMounted(() => {
+  useUpdateStore()
+    .checkUpdate()
+    .then((updateInfo) => {
+      if (updateInfo.available) {
+        ElMessage.success('有新版本可用，请及时更新！')
+        routerPush('/update')
+      }
+    })
+    .catch((error) => {})
+})
+</script>
+
+<style lang="less">
+.layout-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+
+  > .header {
+    height: 50px;
+    min-height: 50px;
+    border-bottom: var(--el-border);
+  }
+
+  > .body {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+
+    > .menu {
+      width: 150px;
+      border-right: var(--el-border);
+
+      .el-menu {
+        border-right: none;
+      }
+    }
+
+    > .content {
+      flex: 1;
+      padding: 1px;
+
+      > .el-tabs {
+        > .el-tabs__header {
+          margin-bottom: 0;
         }
+      }
+
+      .tab-content:first-child {
+        padding-top: 1px;
       }
     }
   }

@@ -1,123 +1,63 @@
-import { createRouter, createWebHashHistory, RouteRecordRaw } from "vue-router";
-import { MenuInfo } from "@/interfaces/MenuInfo.ts";
-import { MenuItem } from "@/interfaces/MenuItem.ts";
+import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
+import getParentPath from '@/utils/getParentPath.ts'
 
-const parsePath = (originPath: string) => {
-  let path = "";
-  originPath
-    .split("/")
-    .slice(1)
-    .forEach((pathWord) => {
-      const match = pathWord.match(/^\[(.*)]$/);
-      if (match) {
-        path += `/:${match[1]}`;
-        return;
-      }
+export const HOME_PATH = '/home' as const
 
-      if (
-        pathWord.toLowerCase() === "home" ||
-        pathWord.toLowerCase() === "index"
-      ) {
-        return;
-      }
+const pageModules = import.meta.glob('../views/**/index.vue', {})
+const pageRouteModules = import.meta.glob('../views/**/index.route.ts', {
+  eager: true,
+  import: 'default',
+})
+const allRoutes: RouteRecordRaw[] = []
+const pageRouteMapArray = Object.entries(pageRouteModules).map(([path, meta]) => {
+  path = path.replace(new RegExp('^../views'), '')
+  path = path.replace(new RegExp('.route.ts$'), '')
+  path = path.replace(new RegExp('index', 'g'), '')
+  path = path.replace(new RegExp('/+', 'g'), '/')
+  path = path.replace(new RegExp('^(.+)/$'), '$1')
+  path = path.replace(/\[([^\]]+)]/g, ':$1')
+  return [path, meta as RouteRecordRaw] as const
+})
+const pageRouteMap = new Map<string, RouteRecordRaw>(pageRouteMapArray)
+Object.entries(pageModules).map(([path, component]) => {
+  path = path.replace(new RegExp('^../views'), '')
+  path = path.replace(new RegExp('.vue$'), '')
+  path = path.replace(new RegExp('index', 'g'), '')
+  path = path.replace(new RegExp('/+', 'g'), '/')
+  path = path.replace(new RegExp('^(.+)/$'), '$1')
+  path = path.replace(/\[([^\]]+)]/g, ':$1')
 
-      let wordStartIndex = 0;
-      const length = pathWord.length;
+  const routeExtra = pageRouteMap.get(path) || {}
+  const route: RouteRecordRaw = {
+    ...routeExtra,
+    path: path,
+    component: component as any,
+    children: [],
+  }
+  allRoutes.push(route)
+})
+const routeMap = new Map<string, RouteRecordRaw>(allRoutes.map((route) => [route.path, route]))
+const removeRouteMap = new Map<string, boolean>()
+allRoutes.forEach((route) => {
+  const parentPath = getParentPath(route.path)
+  const parentRoute = routeMap.get(parentPath)
+  if (!parentRoute) return
+  parentRoute.children ||= []
+  parentRoute.children.push(route)
+  removeRouteMap.set(route.path, true)
+})
 
-      let word = "";
-      for (let i = 1; i < length; i++) {
-        const nextWillEnd = i + 1 === length;
-        const notCapitalized = pathWord[i] === pathWord[i].toLowerCase();
+const homeRoute: RouteRecordRaw = {
+  path: '/',
+  redirect: HOME_PATH,
+}
+const routes: RouteRecordRaw[] = [homeRoute, ...allRoutes.filter((route) => !removeRouteMap.has(route.path))]
 
-        if (!nextWillEnd && notCapitalized) continue;
-
-        if (nextWillEnd) i = length;
-        word += pathWord.slice(wordStartIndex, i).toLowerCase();
-        if (!nextWillEnd) word += "-";
-
-        wordStartIndex = i;
-      }
-      if (word.length > 0) path += `/${word}`;
-    });
-  return path || "/";
-};
-
-export const routes = (() => {
-  const pages = import.meta.glob("../views/**/*.vue", {
-    eager: true,
-    import: "default",
-  });
-
-  const _routers = Object.entries(pages).map(([originPath, component]) => {
-    let path = originPath.replace(/\.\.\/views(.*)\.vue/, "$1");
-    path = parsePath(path);
-
-    return {
-      path,
-      originPath,
-      // @ts-ignore
-      component,
-    } as RouteRecordRaw & { originPath: string };
-  });
-
-  return _routers;
-})();
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: routes,
-});
-export const menuItems = (() => {
-  const menus = import.meta.glob("../views/**/*.menu.ts", {
-    eager: true,
-    import: "default",
-  });
+})
 
-  const routesPathMap = (() => {
-    const _routesPathMap = new Map<string, boolean>();
-    routes.forEach((route) => {
-      _routesPathMap.set(route.path, true);
-    });
-    return _routesPathMap;
-  })();
-
-  const _menuItems: MenuItem[] = [];
-
-  const tempMenuItemMap = new Map<string, MenuItem>();
-  Object.entries(menus).forEach(([originPath, menuInfo], order) => {
-    const menuItem: MenuItem = (() => {
-      let path = originPath
-        .replace("../views", "")
-        .replace(/\/[0-9]+\./, "/")
-        .replace(/\.menu\.ts/, "");
-      path = parsePath(path);
-      const { title } = menuInfo as MenuInfo;
-      return {
-        path,
-        title,
-        order,
-      };
-    })();
-
-    const parentMenuItem = tempMenuItemMap.get(
-      menuItem.path.replace(/\/([^\/]+)$/, ""),
-    );
-    if (parentMenuItem) {
-      parentMenuItem.children ||= [];
-      parentMenuItem.children.push(menuItem);
-      return;
-    }
-
-    if (routesPathMap.has(menuItem.path)) {
-      _menuItems.push(menuItem);
-      return;
-    }
-
-    tempMenuItemMap.set(menuItem.path, menuItem);
-  });
-  tempMenuItemMap.forEach((menuItem) => {
-    menuItem.children = menuItem.children?.sort((a, b) => a.order - b.order);
-    _menuItems.push(menuItem);
-  });
-
-  return _menuItems.sort((a, b) => a.order - b.order);
-})();
+export function defineRoute(route: Partial<RouteRecordRaw>) {
+  return route
+}
