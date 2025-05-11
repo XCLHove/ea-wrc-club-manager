@@ -39,7 +39,9 @@ const update = (win: BrowserWindow) => {
       const url = updateUrl[i]
       try {
         const data = await axios
-          .get(url)
+          .get(url, {
+            timeout: 10 * 1000,
+          })
           .then((res) => res.data)
           .then((data: Pick<UpdateInfo, 'version' | 'description' | 'updateTime' | 'downloadUrl' | 'file'>) => data)
         if (typeof data !== 'object') {
