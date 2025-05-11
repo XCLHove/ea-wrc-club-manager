@@ -39,14 +39,14 @@ const update = (win: BrowserWindow) => {
       const url = updateUrl[i]
       try {
         const data = await axios
-          .get(url, {
-            timeout: 10 * 1000,
-          })
+          .get(url)
           .then((res) => res.data)
-          .then((data: Pick<UpdateInfo, 'version' | 'description' | 'updateTime' | 'downloadUrl' | 'file'>) => data)
-        if (typeof data !== 'object') {
-          return Promise.reject(new Error('update info is not valid'))
-        }
+          .then((data: Pick<UpdateInfo, 'version' | 'description' | 'updateTime' | 'downloadUrl' | 'file'>) => {
+            if (typeof data !== 'object') {
+              return Promise.reject(new Error('update info is not valid'))
+            }
+            return data
+          })
         updateInfo = {
           ...data,
           available: data.version !== app.getVersion(),
