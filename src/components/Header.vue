@@ -1,38 +1,43 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/useUserStore.ts'
-import { computed, ref } from 'vue'
+import { computed, onBeforeMount, ref } from 'vue'
 import { accessTokenUtil } from '@/utils/accessTokenUtil.ts'
 import { refreshTokenUtil } from '@/utils/refreshTokenUtil.ts'
-import { login } from '@/utils/login.ts'
 import { useI18nStore } from '@/stores/useI18nStore.ts'
 import { i18nUtil } from '@/utils/i18n.ts'
+import { loginApi } from '@/api/authApi.ts'
 
 const pageI18n = (name: string) => {
   return i18nUtil('app.component.header', name)
 }
 
-const { user } = storeToRefs(useUserStore())
+const userStore = useUserStore()
+const { user } = storeToRefs(userStore)
 const avatarText = computed(() => {
   if (!user.value) return '登录'
   return user.value.displayName.substring(0, 1)
 })
 
-const logout = async () => {
-  accessTokenUtil.remove()
-  refreshTokenUtil.remove()
-  await window.tokenApi.remove()
-  useUserStore().removeUserCache()
-  user.value = void 0
+const logout = () => {
+  return userStore.logout()
 }
 
 const i18nStore = useI18nStore()
 const { locales } = storeToRefs(i18nStore)
 
 const version = ref('')
-window.appApi.getVersion().then((v) => {
-  version.value = v
-})
+onBeforeMount(() => refreshVersion())
+
+function refreshVersion() {
+  window.appApi.getVersion().then((v) => {
+    version.value = v
+  })
+}
+
+function login() {
+  return userStore.login()
+}
 </script>
 
 <template>

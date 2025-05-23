@@ -12,7 +12,7 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    icon: path.join(process.env.VITE_PUBLIC as string, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -23,15 +23,16 @@ function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
   } else {
-    win.loadFile(path.join(process.env.DIST, 'index.html'))
+    win.loadFile(path.join(process.env.DIST as string, 'index.html'))
   }
 
-  const handlers = import.meta.glob('./mainHandlers/*.ts', {
+  const handlerModule = import.meta.glob('./main-handlers/*.ts', {
     eager: true,
     import: 'default',
   })
-  Object.entries(handlers).forEach(([_, handler]) => {
-    ;(handler as Function)(win)
+  Object.entries(handlerModule).forEach(([_, _handler]) => {
+    const handler = _handler as Function
+    handler(win)
   })
 }
 
