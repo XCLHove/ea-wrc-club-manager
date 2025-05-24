@@ -101,7 +101,7 @@ const showClubDetail = (club: Club) => {
 <template>
   <div class="my-clubs">
     <el-table :data="myClubs" style="width: 100%" :height="tableHeight" v-loading="loading">
-      <el-table-column prop="clubName" :label="pageI18n('columnName.clubName')" width="130" fixed="left" show-overflow-tooltip>
+      <el-table-column prop="clubName" :label="pageI18n('columnName.clubName')" fixed="left" show-overflow-tooltip>
         <template #default="scope">
           <el-button link class="link-to-club" @click="showClubDetail(scope.row)">
             <el-text class="nowrap-hidden" type="info">{{ scope.row.clubName }}</el-text>
