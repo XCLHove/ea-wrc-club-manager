@@ -1,0 +1,13 @@
+.email-login-dialog {
+    .el-form {
+        width: 400px;
+    }
+}
+
+.email-login-dialog-confirm {
+    width: 48%;
+}
+
+.email-login-dialog-cancel {
+    width: 48%;
+}

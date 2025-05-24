@@ -11,6 +11,9 @@ const tokenApi = {
   refreshAccessToken: (refreshToken: string) => {
     return ipcRenderer.invoke(ChannelKey.REFRESH_ACCESS_TOKEN, refreshToken) as Promise<{ accessToken: string; refreshToken: string }>
   },
+  loginByEmail: (email: string, password: string) => {
+    return ipcRenderer.invoke(ChannelKey.LOGIN_BY_EMAIL, { email, password }) as Promise<{ accessToken: string; refreshToken: string }>
+  },
 }
 
 declare global {

@@ -2,11 +2,8 @@
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/useUserStore.ts'
 import { computed, onBeforeMount, ref } from 'vue'
-import { accessTokenUtil } from '@/utils/accessTokenUtil.ts'
-import { refreshTokenUtil } from '@/utils/refreshTokenUtil.ts'
 import { useI18nStore } from '@/stores/useI18nStore.ts'
 import { i18nUtil } from '@/utils/i18n.ts'
-import { loginApi } from '@/api/authApi.ts'
 
 const pageI18n = (name: string) => {
   return i18nUtil('app.component.header', name)
@@ -36,7 +33,7 @@ function refreshVersion() {
 }
 
 function login() {
-  return userStore.login()
+  userStore.login()
 }
 </script>
 

@@ -18,6 +18,10 @@ export const loginApi = singletonPromise(() => {
   return loginByOfficialWebsiteApi()
 })
 
+export const loginByEmailApi = (email: string, password: string) => {
+  return window.tokenApi.loginByEmail(email, password)
+}
+
 /**
  * 获取用户信息
  */

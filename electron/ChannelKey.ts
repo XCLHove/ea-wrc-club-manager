@@ -10,5 +10,6 @@ const ChannelKey = {
   DOWNLOAD_PROGRESS: 'download-progress',
   CANCEL_DOWNLOAD: 'cancel-download',
   AXIOS: 'axios',
+  LOGIN_BY_EMAIL: 'login:email',
 } as const
 export default ChannelKey
