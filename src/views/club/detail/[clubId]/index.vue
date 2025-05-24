@@ -24,10 +24,12 @@ const pageI18n = (name: string) => {
 const tableHeight = (() => {
   const { height } = useWindowSize()
 
-  return computed(() => height.value - 230)
+  return computed(() => height.value - 250)
 })()
 
 const showLeaderboard = ref(false)
+
+const searchDisplayName = ref('')
 
 // 俱乐部ID
 const { clubId } = useRoute().params as { clubId: string }
@@ -50,6 +52,13 @@ const currentStage = ref<Stage>()
 const currentStageID = ref('')
 // 当前赛段排行榜
 const currentStageLeaderBoard = ref<LeaderboardItem[]>([])
+const currentStageFilteredLeaderBoard = computed(() => {
+  return currentStageLeaderBoard.value.filter((item) => {
+    if (!searchDisplayName.value) return true
+    if (!item.displayName.toUpperCase().includes(searchDisplayName.value.toLocaleUpperCase())) return false
+    return true
+  })
+})
 // 已加载赛段总时间排行榜
 type TypeTotalTime = {
   ssid: string
@@ -548,9 +557,16 @@ const join = (clubId: string) => {
       </el-select>
 
       <div v-show="currentSelectShow === selectShowOptions.stageLeaderboard">
-        <el-table v-model:data="currentStageLeaderBoard" :height="tableHeight" :row-style="getTableRowStyle" v-loading="loadingLeaderboard">
+        <el-table :data="currentStageFilteredLeaderBoard" :height="tableHeight" :row-style="getTableRowStyle" v-loading="loadingLeaderboard">
           <el-table-column prop="rank" :label="pageI18n(`leaderboard.columnName.rank`)" width="60" fixed="left" />
-          <el-table-column prop="displayName" :label="pageI18n(`leaderboard.columnName.name`)" />
+          <el-table-column prop="displayName" :label="pageI18n(`leaderboard.columnName.name`)">
+            <template #header>
+              <div style="display: flex; flex-direction: row; align-items: center">
+                <span style="white-space: nowrap; margin-right: 5px">{{ pageI18n(`leaderboard.columnName.name`) }}</span>
+                <el-input size="small" v-model="searchDisplayName" placeholder="search"></el-input>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="time" :label="pageI18n(`leaderboard.columnName.time`)">
             <template #default="scope">
               {{ scope.row?.time?.substring(0, 12) }}
