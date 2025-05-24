@@ -16,8 +16,8 @@
           </el-scrollbar>
         </div>
         <div class="content">
-          <el-tabs v-model="currentTabPath" type="card" closable @tab-remove="closeTab">
-            <el-tab-pane v-for="tab in tabs" :key="tab.path" :label="menuI18n(tab.label)" :name="tab.path" :closable="false">
+          <el-tabs v-model="currentTabPath" type="card" @tab-remove="closeTab">
+            <el-tab-pane v-for="tab in tabs" :key="tab.path" :label="menuI18n(tab.label)" :name="tab.path" :closable="tab.path !== HOME_PATH">
               <div class="tab-content" style="height: calc(100vh - 95px); overflow: hidden">
                 <Component :is="getTabComponent(tab.path)" />
               </div>
@@ -133,8 +133,9 @@ function closeTab(path: string) {
   tabs.value.forEach((tab, index) => {
     if (index === 0) return
     if (tab.path !== path) return
-    const lastIndex = index - 1
-    currentTabPath.value = tabs.value[lastIndex].path
+    if (path === currentTabPath.value) {
+      currentTabPath.value = tabs.value[index - 1].path
+    }
 
     closableTabs.value = closableTabs.value.filter((tab) => tab.path !== path)
     routeComponentCacheMap.delete(path)
