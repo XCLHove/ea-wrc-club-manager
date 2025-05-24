@@ -5,6 +5,7 @@ import * as os from 'os'
 import * as fs from 'fs'
 import * as child_process from 'child_process'
 import ChannelKey from '../ChannelKey.ts'
+import throttle from '../utils/throttle.ts'
 
 function getUpdateUrl(): Promise<string[]> {
   const url = [
@@ -20,18 +21,18 @@ const update = (win: BrowserWindow) => {
   ipcMain.handle(ChannelKey.CHECK_UPDATE, () => {
     return checkUpdate()
   })
-  ipcMain.handle(ChannelKey.DOWNLOAD_UPDATE, (_event, updateUrl?: string) => {
-    return downloadUpdate(updateUrl)
+  ipcMain.handle(ChannelKey.DOWNLOAD_UPDATE, (_event, url: string, chunkNumber = 8) => {
+    return downloadUpdate(url, chunkNumber)
   })
   ipcMain.handle(ChannelKey.INSTALL_UPDATE, () => {
     return quitAndInstall()
   })
-  ipcMain.handle(ChannelKey.CANCEL_DOWNLOAD, (event, message?: string) => {
-    cancelDownload?.(message)
+  ipcMain.handle(ChannelKey.CANCEL_DOWNLOAD, (_event, message = 'cancel download') => {
+    cancelerList.forEach((cancel) => cancel(message))
   })
 
   let updateInfo: UpdateInfo | null = null
-  let cancelDownload: Canceler
+  let cancelerList: Canceler[] = []
 
   async function checkUpdate() {
     const updateUrl = await getUpdateUrl()
@@ -72,62 +73,71 @@ const update = (win: BrowserWindow) => {
     return savePath
   }
 
-  async function downloadUpdate(downloadUrl?: string) {
-    if (!updateInfo) {
-      updateInfo = await checkUpdate()
-    }
+  function downloadUpdate(downloadUrl: string, chunkNumber = 8) {
     if (!updateInfo?.available) return Promise.reject(new Error('There are no updates available'))
 
-    downloadUrl ||= updateInfo.downloadUrl[0].url
-    console.log(`downloadUrl: ${downloadUrl}`)
-
-    const savePath = getInstallerPath(updateInfo.file)
-    const dir = path.dirname(savePath)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
+    const installerPath = getInstallerPath(updateInfo.file)
+    const parentDir = path.dirname(installerPath)
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true })
     }
 
-    const writer = fs.createWriteStream(savePath)
-    return new Promise((resolve, reject) => {
-      axios({
-        method: 'get',
-        url: downloadUrl || updateInfo!.downloadUrl[0].url,
-        responseType: 'stream',
-        timeout: 10 * 60 * 1000,
-        onDownloadProgress(progressEvent) {
-          win.webContents.send(ChannelKey.DOWNLOAD_PROGRESS, {
-            current: progressEvent.loaded,
-            total: progressEvent.total,
-          })
-        },
-        cancelToken: new axios.CancelToken((cancel) => {
-          cancelDownload = (message, config, request) => {
-            reject(message)
-            return cancel(message, config, request)
-          }
-        }),
-      })
-        .then((response) => {
-          response.data.pipe(writer)
-          const saveFilePromise = new Promise<void>((resolve, reject) => {
-            writer.on('finish', resolve)
-            writer.on('error', reject)
-          })
-          saveFilePromise.finally(() => writer.close())
-          return saveFilePromise
+    return axios.head(downloadUrl).then((response) => {
+      const totalSize = parseInt(response.headers['content-length'])
+      const chunkSize = Math.ceil(totalSize / chunkNumber)
+      let currentDownloadedSize = 0
+      const sendProgress = throttle(() => {
+        win.webContents.send(ChannelKey.DOWNLOAD_PROGRESS, {
+          current: currentDownloadedSize,
+          total: totalSize,
         })
-        .then(resolve)
-        .catch(reject)
-    }).finally(() => {
-      writer.close()
+      }, 100)
+
+      const promises = Array.from({ length: chunkNumber }).map((_, index) => {
+        const start = index * chunkSize
+        const end = Math.min(start + chunkSize, totalSize) - 1
+
+        const promise = new Promise<void>((resolve, reject) => {
+          fs.writeFileSync(installerPath, '')
+          const writerStream = fs.createWriteStream(installerPath, { start })
+          writerStream.on('finish', () => resolve())
+          axios
+            .get(downloadUrl, {
+              responseType: 'stream',
+              headers: {
+                Range: `bytes=${start}-${end}`,
+              },
+              cancelToken: new axios.CancelToken((cancel) => {
+                cancelerList.push((...args: any[]) => {
+                  cancel(...args)
+                  cancel = () => {}
+                  reject(new Error('cancel download'))
+                  writerStream.close()
+                })
+              }),
+            })
+            .then((response) => {
+              response.data.on('data', (chunk: any) => {
+                currentDownloadedSize += chunk.length
+                sendProgress()
+              })
+              response.data.pipe(writerStream)
+            })
+            .catch(reject)
+        })
+        return promise
+      })
+      return Promise.all(promises).catch((error) => {
+        cancelerList.forEach((cancel) => cancel())
+        cancelerList = []
+        console.error(error)
+        return Promise.reject(error)
+      })
     })
   }
 
-  async function quitAndInstall() {
-    if (!updateInfo) {
-      updateInfo = await checkUpdate()
-    }
-    if (!updateInfo.available) return Promise.reject(new Error('There are no updates available'))
+  function quitAndInstall() {
+    if (!updateInfo?.available) return Promise.reject(new Error('There are no updates available'))
     const installerPath = getInstallerPath(updateInfo.file)
     if (!fs.existsSync(installerPath)) return Promise.reject(new Error(`installer not found: ${installerPath}`))
     const child = child_process.spawn(installerPath, [], {

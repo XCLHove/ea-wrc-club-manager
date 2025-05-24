@@ -8,12 +8,12 @@ const updateApi = {
   checkUpdate: (): Promise<UpdateInfo> => {
     return ipcRenderer.invoke(ChannelKey.CHECK_UPDATE)
   },
-  downloadUpdate: (onProgress: (progress: { current: number; total: number }) => void, url?: string): Promise<void> => {
+  downloadUpdate: (onProgress: (progress: { current: number; total: number }) => void, url: string, chunkNumber = 8): Promise<void> => {
     const listener = (event: IpcRendererEvent, progressData: { current: number; total: number }) => {
       onProgress(progressData)
     }
     ipcRenderer.on(ChannelKey.DOWNLOAD_PROGRESS, listener)
-    return ipcRenderer.invoke(ChannelKey.DOWNLOAD_UPDATE, url).finally(() => {
+    return ipcRenderer.invoke(ChannelKey.DOWNLOAD_UPDATE, url, chunkNumber).finally(() => {
       ipcRenderer.off(ChannelKey.DOWNLOAD_PROGRESS, listener)
     })
   },
