@@ -1,5 +1,4 @@
-@import "flex.css";
-@import "margin.css";
+@import "tailwind.css";
 
 body {
     margin: 0;

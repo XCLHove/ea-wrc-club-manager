@@ -148,6 +148,9 @@ function getUpdateLog(url: string) {
 </template>
 
 <style scoped lang="less">
+@import '@/assets/css/flex.css';
+@import '@/assets/css/margin.css';
+
 .update-page {
 }
 </style>
