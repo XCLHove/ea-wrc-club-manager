@@ -1,33 +1,26 @@
 <script setup lang="ts">
-import { clubDetail as getClubDetail, getChampionship, joinClub, stageLeaderboard } from '@/api/clubApi'
+import { clubDetail as getClubDetail, getChampionship, joinClub, stageLeaderboardApi } from '@/api/clubApi'
 import { useRoute } from 'vue-router'
-import { computed, onMounted, Ref, ref } from 'vue'
+import { computed, customRef, onMounted, Ref, ref } from 'vue'
 import { Championship, ClubDetail, Location, LocationStatus, Stage } from '@/interfaces/ClubDetail'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/useUserStore.ts'
 import { User } from '@/interfaces/User.ts'
 import { useWindowSize } from '@vueuse/core'
-import { TimeTrialEntry } from '@/interfaces/TimeTrialStageLeaderboard.ts'
 import { accessLevels, Role } from '@/interfaces/Club'
-import { ElDialog, ElScrollbar } from 'element-plus'
+import { dayjs, ElMessage, ElMessageBox, ElScrollbar, ScrollbarInstance } from 'element-plus'
 import { i18nUtil } from '@/utils/i18n'
 import { Platform } from '@/interfaces/Platform'
 import { LeaderboardItem } from '@/interfaces/ChampionshipStageLeaderboard'
 import { elPrompt } from '@/utils/elPrompt'
-import { exportToExcel } from '@/utils/exportToExcel'
+import { exportToExcel, exportToExcelV2, Row } from '@/utils/exportToExcel'
 import Analysis from '@/components/Analysis.vue'
 
 const pageI18n = (name: string) => {
   return i18nUtil('app.page.clubDetail', name)
 }
-
-const tableHeight = (() => {
-  const { height } = useWindowSize()
-
-  return computed(() => height.value - 250)
-})()
-
-const showLeaderboard = ref(false)
+const { height: windowHeight } = useWindowSize()
+const tableHeight = computed(() => windowHeight.value - 285)
 
 const searchDisplayName = ref('')
 
@@ -37,16 +30,17 @@ const { clubId } = useRoute().params as { clubId: string }
 const { user }: { user: Ref<User> } = storeToRefs(useUserStore())
 // 俱乐部信息
 const clubDetail = ref<ClubDetail>()
+const clubChampionshipIDs = computed(() => clubDetail.value?.championshipIDs || [])
 // 当前锦标赛
 const currentChampionship = ref<Championship>()
 const currentChampionshipID = ref('')
+const currentChampionshipLocations = computed(() => currentChampionship.value?.events || [])
 // 当前分站
 type NewLocation = Location & {
-  totalFinishCount?: TypeFinishCount[]
-  totalTimeLeaderBoard?: TypeTotalTime[]
+  allLeaderboardList?: AllLeaderboardItem[]
 }
 const currentLocation = ref<NewLocation>()
-const currentLocationID = ref('')
+const currentLocationStages = computed(() => currentLocation.value?.stages || [])
 // 当前赛段
 const currentStage = ref<Stage>()
 const currentStageID = ref('')
@@ -59,22 +53,26 @@ const currentStageFilteredLeaderBoard = computed(() => {
     return true
   })
 })
-// 已加载赛段总时间排行榜
-type TypeTotalTime = {
+// 全部排行榜
+type AllLeaderboardItem = {
   ssid: string
   displayName: string
   totalTime: number
   differenceToFirst: number
+  finishedStageCount: number
   rank: number
+  stageLeaderboard: (LeaderboardItem | null | undefined)[]
 }
-const currentLocationTotalTimeLeaderBoard = ref<TypeTotalTime[]>([])
-// 当前分站完赛赛段数（仅包含已加载赛段）
-type TypeFinishCount = {
-  ssid: string
-  displayName: string
-  count: number
-}
-const currentLocationFinishedStageCount = ref<TypeFinishCount[]>([])
+const allLeaderboardList = customRef(() => {
+  return {
+    get() {
+      return currentLocation.value?.allLeaderboardList || []
+    },
+    set(value: AllLeaderboardItem[]) {
+      currentLocation.value!.allLeaderboardList = value
+    },
+  }
+})
 // 获取俱乐部信息
 const loadingClubDetail = ref(false)
 onMounted(() => {
@@ -84,33 +82,34 @@ onMounted(() => {
       setClubDetail(club)
     })
     .catch(() => {
-      elPrompt.error('获取俱乐部信息失败！')
+      ElMessage.error('获取俱乐部信息失败！')
     })
     .finally(() => {
       loadingClubDetail.value = false
     })
 })
-const setClubDetail = (club: ClubDetail) => {
-  clubDetail.value = club
-  setCurrentChampionship(club.currentChampionship)
+const setClubDetail = (value: ClubDetail) => {
+  clubDetail.value = value
+  setCurrentChampionship(value.currentChampionship)
 }
 const saveClubDetail = () => {
   // 保存到分站信息
-  currentLocation.value.stages.forEach((item, index) => {
-    if (item.id !== currentStage.value.id) return
-    currentLocation.value.stages[index] = currentStage.value
+  currentLocation.value!.stages.forEach((stage, index) => {
+    if (stage.id !== currentStage.value?.id) return
+    currentLocation.value!.stages[index] = currentStage.value
   })
   // 保存到赛事信息
-  currentChampionship.value.events.forEach((item, index) => {
-    if (item.id !== currentLocation.value.id) return
-    currentChampionship.value.events[index] = currentLocation.value
+  currentChampionship.value!.events.forEach((location, index) => {
+    if (location.id !== currentLocation.value?.id) return
+    currentChampionship.value!.events[index] = currentLocation.value
   })
   // 保存到俱乐部信息
-  clubDetail.value.championships[currentChampionship.value.id] = currentChampionship.value
+  clubDetail.value!.championships ||= {}
+  clubDetail.value!.championships[currentChampionship.value!.id] = <Championship>currentChampionship.value
 }
 const loadingChampionship = ref(false)
 const loadChampionship = (id: string) => {
-  let championship = clubDetail.value.championships[id]
+  let championship = clubDetail.value!.championships?.[id]
   if (championship) {
     setCurrentChampionship(championship)
     return
@@ -130,6 +129,8 @@ const loadChampionship = (id: string) => {
 }
 const setCurrentChampionship = (championship: Championship) => {
   if (!championship) return
+  if (!clubDetail.value) return
+
   clubDetail.value.championships ||= {}
   clubDetail.value.championships[championship.id] = championship
   currentChampionship.value = championship
@@ -144,179 +145,168 @@ const setCurrentChampionship = (championship: Championship) => {
 }
 const setCurrentLocation = (location: NewLocation) => {
   currentLocation.value = location
-  currentLocationID.value = location.id
-
-  currentLocationFinishedStageCount.value = []
-  currentLocationTotalTimeLeaderBoard.value = []
-
   setCurrentStage(location.stages[0])
-  setCurrentLocationFinishedStageCount(location?.totalFinishCount || [])
-  setCurrentLocationTotalTimeLeaderboard(location?.totalTimeLeaderBoard || [])
 }
 const setCurrentStage = (stage: Stage) => {
+  if (loadingLeaderboard.value) return
   currentStage.value = stage
   currentStageID.value = stage.id
-
-  if (stage.entries) {
-    currentStageLeaderBoard.value = stage.entries
-    return
+  currentStageLeaderBoard.value = stage.entries || []
+  if (currentStageLeaderBoard.value.length === 0) {
+    loadStageLeaderboard()
   }
-  loadStageLeaderboard()
-}
-const setCurrentLocationFinishedStageCount = (data: TypeFinishCount[]) => {
-  currentLocationFinishedStageCount.value = data
-}
-const setCurrentLocationTotalTimeLeaderboard = (data: TypeTotalTime[]) => {
-  currentLocationTotalTimeLeaderBoard.value = data
 }
 const setCurrentStageLeaderboard = (entries: LeaderboardItem[]) => {
   // 保存到赛段信息
-  currentStage.value.entries = entries
+  currentStage.value!.entries = entries
 }
-// 统计当前分站完赛赛段数
-const updateCurrentLocationFinishedStageCount = (leaderboard: LeaderboardItem[]) => {
-  const countMap = new Map<string, TypeFinishCount>()
-  currentLocationFinishedStageCount.value.forEach((item) => {
-    countMap.set(item.ssid, item)
-  })
 
-  leaderboard.forEach(({ ssid, displayName }) => {
-    let old = countMap.get(ssid)
-    if (!old) {
-      old = {
-        ssid,
-        displayName,
-        count: 0,
+// 计算赛段时间(当没有数据时)
+const getStageTimeOnNoData = (stage: Stage) => {
+  // 25km以上为35分钟
+  if (stage.stageSettings.distance > 25) {
+    return 35 * 60 * 1000
+  }
+
+  // 16-25km为25分钟
+  if (stage.stageSettings.distance > 16) {
+    return 25 * 60 * 1000
+  }
+
+  // 8-16km为16分钟
+  if (stage.stageSettings.distance > 8) {
+    return 16 * 60 * 1000
+  }
+
+  // 8km以下为8分钟
+  return 8 * 60 * 1000
+}
+// 统计全部排行榜
+const updateAllLeaderboardList = (leaderboard: LeaderboardItem[]) => {
+  const currentStageIndex = currentLocationStages.value.findIndex((stage) => stage.id === currentStageID.value)
+  const oldMap = new Map<string, AllLeaderboardItem>(allLeaderboardList.value.map((item) => [item.ssid, item]))
+  const newMap = new Map<string, AllLeaderboardItem>()
+  leaderboard.forEach((leaderboardItem) => {
+    const getDefault = () => {
+      const totalTime = Array.from({ length: currentStageIndex })
+        .map((_, index) => {
+          const stage = currentLocationStages.value[index]
+          return getStageTimeOnNoData(stage)
+        })
+        .reduce((acc, cur) => acc + cur, 0)
+      const stageLeaderboard = [
+        ...Array.from({ length: currentStageIndex }).map(() => void 0),
+        ...Array.from({ length: currentLocationStages.value.length - currentStageIndex }).map(() => null),
+      ]
+      const result: AllLeaderboardItem = {
+        ssid: leaderboardItem.ssid,
+        displayName: leaderboardItem.displayName,
+        totalTime: totalTime,
+        finishedStageCount: 0,
+        differenceToFirst: 0,
+        rank: 0,
+        stageLeaderboard: stageLeaderboard,
       }
+      return result
     }
-    old.count += 1
-    countMap.set(ssid, old)
+    const allLeaderboardItem = oldMap.get(leaderboardItem.ssid) || getDefault()
+    allLeaderboardItem.totalTime += parseTimeToNumber(leaderboardItem.time)
+    allLeaderboardItem.finishedStageCount += 1
+    allLeaderboardItem.stageLeaderboard[currentStageIndex] = leaderboardItem
+    oldMap.delete(allLeaderboardItem.ssid)
+    newMap.set(allLeaderboardItem.ssid, allLeaderboardItem)
+  })
+  oldMap.forEach((item) => {
+    item.stageLeaderboard[currentStageIndex] = void 0
+    item.totalTime += getStageTimeOnNoData(currentLocationStages.value[currentStageIndex])
+    newMap.set(item.ssid, item)
   })
 
-  currentLocationFinishedStageCount.value = []
-  countMap.forEach((item) => {
-    currentLocationFinishedStageCount.value.push(item)
+  let newAllLeaderboardList = [...newMap.values()]
+
+  // 计算差时
+  let minTotalTime = -1
+  newAllLeaderboardList.forEach((item) => {
+    if (minTotalTime === -1) {
+      minTotalTime = item.totalTime
+    }
+    minTotalTime = Math.min(minTotalTime, item.totalTime)
   })
-  currentLocation.value.totalFinishCount = currentLocationFinishedStageCount.value
-}
-// 统计总时间排行榜
-const updateCurrentLocationTotalTimeLeaderboard = (leaderboard: LeaderboardItem[]) => {
-  const isFirstUpdate = currentLocationTotalTimeLeaderBoard.value.length === 0
-  const oldMap = new Map<string, TypeTotalTime>()
-  const newMap = new Map<string, TypeTotalTime>()
-  let minTimeNumber = 1000 * 60 * 60 * 24
-  currentLocationTotalTimeLeaderBoard.value.forEach((item) => {
-    oldMap.set(item.ssid, item)
-  })
-  leaderboard.forEach(({ ssid, displayName, time }, index) => {
-    let old = oldMap.get(ssid)
-    if (!isFirstUpdate && !old) {
-      return
-    }
-    old ||= {
-      ssid,
-      displayName,
-      totalTime: 0,
-      differenceToFirst: 0,
-      rank: 0,
-    }
-    old.totalTime += parseTimeToNumber(time)
-    if (index === 0) {
-      minTimeNumber = old.totalTime
-    }
-    minTimeNumber = Math.min(minTimeNumber, old.totalTime)
-    newMap.set(ssid, old)
+  newAllLeaderboardList.forEach((item) => {
+    item.differenceToFirst = item.totalTime - minTotalTime
   })
 
-  const _leaderboard: TypeTotalTime[] = []
-  newMap.forEach((item) => {
-    item.differenceToFirst = item.totalTime - minTimeNumber
-    _leaderboard[item.differenceToFirst] = item
+  // 计算排名
+  newAllLeaderboardList = newAllLeaderboardList.sort((a, b) => {
+    let r = a.totalTime - b.totalTime
+    return r
   })
-
-  const _leaderboard2: TypeTotalTime[] = []
-  _leaderboard.forEach((item) => {
-    _leaderboard2.push(item)
-  })
-
-  currentLocationTotalTimeLeaderBoard.value = []
-  _leaderboard2.forEach((item, index) => {
+  newAllLeaderboardList.forEach((item, index) => {
     item.rank = index + 1
-    currentLocationTotalTimeLeaderBoard.value.push(item)
   })
 
-  currentLocation.value.totalTimeLeaderBoard = currentLocationTotalTimeLeaderBoard.value
+  allLeaderboardList.value = newAllLeaderboardList
 }
 
-const dialogText = ref('')
-const dialogVisible = ref(false)
-const showText = (text: string) => {
-  dialogText.value = text
-  dialogVisible.value = true
+const showClubDescriptionDialog = (text: string) => {
+  ElMessageBox({
+    title: 'Club Description',
+    message: text,
+    showConfirmButton: false,
+  })
 }
 
-const showSelectLocationLabel = (location: Location) => {
+const getLocationSelectLabel = (location: Location) => {
   const locationName = i18nUtil('wrc.location', location.eventSettings.location)
   const weatherSeason = i18nUtil('app.page.clubDetail.weatherSeason', location.eventSettings.weatherSeason)
   const vehicleClass = i18nUtil('wrc.vehicleClass', location.eventSettings.vehicleClass)
   return `${locationName} - ${weatherSeason} - ${vehicleClass}`
 }
-const showSelectStageLabel = (stage: Stage) => {
+const getStageSelectLabel = (stage: Stage) => {
   const stageName = i18nUtil('wrc.stage', stage.stageSettings.route)
   const weatherAndSurface = i18nUtil('app.page.clubDetail.weatherAndSurface', stage.stageSettings.weatherAndSurface)
   return `${stageName} - ${weatherAndSurface}`
 }
 
 const loadingLeaderboard = ref(false)
-const loadStageLeaderboard = () => {
-  let selfEntry: LeaderboardItem = null
-  let _currentStageLeaderBoard: LeaderboardItem[] = []
-  const getData = async (nextCursor?: string) => {
-    await stageLeaderboard({
+const loadStageLeaderboard = async () => {
+  const getStageLeaderBoardData = async (nextCursor?: string) => {
+    const { entries, next } = await stageLeaderboardApi({
       clubId: clubId,
-      stageLeaderboardID: currentStage.value.leaderboardID,
+      stageLeaderboardID: currentStage.value!.leaderboardID,
       SortCumulative: false,
       MaxResultCount: 20,
       FocusOnMe: false,
       Platform: Platform.CROSS_PLATFORM,
       Cursor: nextCursor,
-    }).then(async ({ entries, next }: { entries: LeaderboardItem[]; next: string }) => {
-      _currentStageLeaderBoard.push(...entries)
-      // 获取下一页
-      if (next) {
-        await getData(next)
-        return
-      }
-
-      // 避免自身记录重复
-      _currentStageLeaderBoard = _currentStageLeaderBoard.filter((item) => {
-        if (item.ssid !== user.value?.ssid) return true
-        selfEntry = item
-        return false
-      })
-      // 设置自身记录
-      if (selfEntry !== null) {
-        _currentStageLeaderBoard = [
-          ..._currentStageLeaderBoard.slice(0, selfEntry.rank - 1),
-          selfEntry,
-          ..._currentStageLeaderBoard.slice(selfEntry.rank - 1),
-        ]
-      }
-      currentStageLeaderBoard.value = _currentStageLeaderBoard
-
-      if (_currentStageLeaderBoard?.length > 0) {
-        setCurrentStageLeaderboard(_currentStageLeaderBoard)
-        updateCurrentLocationFinishedStageCount(_currentStageLeaderBoard)
-        updateCurrentLocationTotalTimeLeaderboard(_currentStageLeaderBoard)
-        saveClubDetail()
-      }
     })
+    // 获取下一页
+    if (next) {
+      const nextEntries: LeaderboardItem[] = await getStageLeaderBoardData(next)
+      return [...entries, ...nextEntries]
+    }
+
+    return entries
   }
 
   loadingLeaderboard.value = true
-  getData().finally(() => {
+  let newStageLeaderBoard = await getStageLeaderBoardData().finally(() => {
     loadingLeaderboard.value = false
   })
+  // 避免记录重复
+  const entryMap = new Map<string, LeaderboardItem>()
+  newStageLeaderBoard = newStageLeaderBoard.filter((item) => {
+    if (entryMap.has(item.wrcPlayerId)) return false
+    entryMap.set(item.wrcPlayerId, item)
+    return true
+  })
+  currentStageLeaderBoard.value = newStageLeaderBoard
+
+  if (newStageLeaderBoard.length > 0) {
+    setCurrentStageLeaderboard(newStageLeaderBoard)
+    updateAllLeaderboardList(newStageLeaderBoard)
+    saveClubDetail()
+  }
 }
 
 const formatNumberToTime = (ms: number) => {
@@ -332,12 +322,12 @@ const parseTimeToNumber = (time: string) => {
   return timeNumber
 }
 
-const getTableRowStyle = ({ row }: { row: TimeTrialEntry }) => {
-  if (row.ssid !== user.value?.ssid) return {}
+const getTableRowStyle = (ssid: string) => {
+  if (ssid !== user.value?.ssid) return {}
   return { 'background-color': 'rgba(103, 194, 58, .2)' }
 }
 
-const scrollbarRef = ref<InstanceType<typeof ElScrollbar>>()
+const scrollbarRef = ref<ScrollbarInstance>()
 let scrollLeftWidth = 0
 const scrollStep = 50
 let maxScrollLeftWidth = scrollLeftWidth + scrollStep + 1
@@ -350,31 +340,18 @@ const handleWheel = (e: WheelEvent) => {
   }
   scrollbarRef.value?.setScrollLeft(scrollLeftWidth)
 }
-const handleScroll = ({ scrollLeft }) => {
+const handleScroll = ({ scrollLeft }: { scrollLeft: number }) => {
   maxScrollLeftWidth = scrollLeft + scrollStep + 1
   scrollLeftWidth = scrollLeft
-}
-
-const selectShowOptions = {
-  stageLeaderboard: 'stageLeaderboard',
-  locationTotalTimeLeaderboard: 'locationTotalTimeLeaderboard',
-  locationFinishedStageCount: 'locationFinishedStageCount',
-}
-const currentSelectShow = ref(selectShowOptions.stageLeaderboard)
-
-const saveFinishedStageCountAsExcel = () => {
-  const fileName = clubDetail.value.clubName
-  const sheetName = i18nUtil('wrc.location', currentLocation.value.eventSettings.location)
-  exportToExcel(fileName, sheetName, currentLocation.value.totalFinishCount)
 }
 
 const analysis = (item: LeaderboardItem) => {
   analysisData.value.leaderboardId = item.leaderboardId
   analysisData.value.playerId = item.wrcPlayerId
-  analysisData.value.location = showSelectLocationLabel(currentLocation.value)
-  analysisData.value.stage = showSelectStageLabel(currentStage.value)
+  analysisData.value.location = getLocationSelectLabel(currentLocation.value!)
+  analysisData.value.stage = getStageSelectLabel(currentStage.value!)
   analysisData.value.car = item.vehicle
-  analysisData.value.distance = currentStage.value.stageSettings.distance
+  analysisData.value.distance = currentStage.value!.stageSettings.distance
 
   visibleAnalysis.value = true
 }
@@ -392,240 +369,294 @@ const join = (clubId: string) => {
   loadingClubDetail.value = true
   joinClub(clubId)
     .then(() => {
-      elPrompt.success('加入成功！')
+      ElMessage.success('加入成功！')
       window.location.reload()
     })
     .catch(() => {
-      elPrompt.error('加入失败！')
+      ElMessage.error('加入失败！')
     })
+}
+
+const saveAllLeaderboardAsExcel = () => {
+  const data: Row[] = []
+  allLeaderboardList.value.forEach((allLeaderboardItem) => {
+    const row: Row = []
+    row.push({
+      name: 'ssid',
+      value: allLeaderboardItem.ssid,
+    })
+    row.push({
+      name: 'EA ID',
+      value: allLeaderboardItem.displayName,
+    })
+    row.push({
+      name: '排名',
+      value: allLeaderboardItem.rank,
+    })
+    row.push({
+      name: '有效场次',
+      value: allLeaderboardItem.finishedStageCount,
+    })
+    row.push({
+      name: '总时间',
+      value: formatNumberToTime(allLeaderboardItem.totalTime),
+    })
+    row.push({
+      name: '差时',
+      value: formatNumberToTime(allLeaderboardItem.differenceToFirst),
+    })
+    allLeaderboardItem.stageLeaderboard.forEach((stageLeaderboardItem, index) => {
+      if (stageLeaderboardItem === null) return
+      let value = stageLeaderboardItem?.time.substring(0, 12)
+      value ||= formatNumberToTime(getStageTimeOnNoData(currentLocationStages.value[index]))
+      row.push({
+        name: `SS${index + 1}`,
+        value: value,
+      })
+    })
+    data.push(row)
+  })
+
+  const fileName = clubDetail.value!.clubName
+  const sheetName = i18nUtil('wrc.location', currentLocation.value!.eventSettings.location)
+  exportToExcelV2(`${fileName}(${sheetName})`, sheetName, data)
 }
 </script>
 
 <template>
   <div class="detail-container">
-    <el-dialog v-model="dialogVisible">
-      <el-text>
-        {{ dialogText }}
-      </el-text>
-    </el-dialog>
     <Analysis v-model:data="analysisData" v-model:visible="visibleAnalysis"></Analysis>
-    <div class="select-page">
-      <el-radio-group v-model="showLeaderboard">
-        <el-radio-button :value="false">
-          {{ pageI18n('select.clubDetail') }}
-        </el-radio-button>
-        <el-radio-button :value="true">
-          {{ pageI18n('select.leaderboard') }}
-        </el-radio-button>
-      </el-radio-group>
-    </div>
-    <div class="page-container club-info-container" v-show="!showLeaderboard" v-loading="loadingClubDetail">
-      <h2 class="title">{{ pageI18n('title.clubInfo') }}</h2>
-      <div class="club-info">
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.clubName') }}</el-text>
-          <el-text class="font-bold">{{ clubDetail?.clubName }}</el-text>
-          <el-button v-if="clubDetail?.role === Role.NO_JOIN" style="margin-left: 10px" type="primary" link @click="join(clubId)">加入</el-button>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.clubID') }}</el-text>
-          <el-text>{{ clubDetail?.clubID }}</el-text>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.ownerName') }}</el-text>
-          <el-text>{{ clubDetail?.ownerDisplayName }}</el-text>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.accessLevel') }}</el-text>
-          <el-text>{{ accessLevels[clubDetail?.accessLevel] }}</el-text>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.description') }}</el-text>
-          <el-tooltip effect="light" :content="pageI18n('clubInfo.prompt.clickToViewDescription')">
-            <el-button link class="nowrap-hidden" @click="showText(clubDetail?.clubDescription)">{{ clubDetail?.clubDescription }}</el-button>
-          </el-tooltip>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.count') }}</el-text>
-          <el-text>{{ clubDetail?.activeMemberCount }}</el-text>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.like') }}</el-text>
-          <el-text>{{ clubDetail?.likeCount }}</el-text>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.dislike') }}</el-text>
-          <el-text>{{ clubDetail?.dislikeCount }}</el-text>
-        </div>
-        <div class="info-item">
-          <el-text class="label">{{ pageI18n('clubInfo.label.createDate') }}</el-text>
-          <el-text>{{ new Date(clubDetail?.clubCreatedAt).toLocaleString() }}</el-text>
-        </div>
-      </div>
-      <h2 class="title">{{ pageI18n('title.championship') }}</h2>
-      <div class="championship-info" v-show="clubDetail?.championshipIDs.length > 0" v-loading="loadingChampionship">
-        <el-select :disabled="loadingChampionship" v-model="currentChampionshipID">
-          <el-option
-            v-for="(id, index) in clubDetail?.championshipIDs"
-            :value="id"
-            :key="id"
-            :label="`championship${index + 1}`"
-            @click="loadChampionship(id)"
-          >
-            championship {{ index + 1 }}
-          </el-option>
-        </el-select>
-        <div class="settings">
-          <div class="setting-item">
-            <el-text class="label">{{ pageI18n('championship.label.name') }}</el-text>
-            <el-text>{{ currentChampionship?.settings.name }}</el-text>
-          </div>
-          <div class="setting-item">
-            <el-text class="label">{{ pageI18n('championship.label.isHardcoreDamageEnabled') }}</el-text>
-            <el-text>{{
-              currentChampionship?.settings.isHardcoreDamageEnabled
-                ? pageI18n('championship.isHardcoreDamageEnabled.true')
-                : pageI18n('championship.isHardcoreDamageEnabled.false')
-            }}</el-text>
-          </div>
-          <div class="setting-item">
-            <el-text class="label">{{ pageI18n('championship.label.isAssistsAllowed') }}</el-text>
-            <el-text>{{
-              currentChampionship?.settings.isAssistsAllowed
-                ? pageI18n('championship.isAssistsAllowed.true')
-                : pageI18n('championship.isAssistsAllowed.false')
-            }}</el-text>
-          </div>
-          <div class="setting-item">
-            <el-text class="label">{{ pageI18n('championship.label.isTuningAllowed') }}</el-text>
-            <el-text>{{
-              currentChampionship?.settings.isTuningAllowed
-                ? pageI18n('championship.isTuningAllowed.true')
-                : pageI18n('championship.isTuningAllowed.false')
-            }}</el-text>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="page-container" v-show="showLeaderboard">
-      <el-select :disabled="loadingLeaderboard" v-model="currentLocationID">
-        <el-option
-          v-for="location in currentChampionship?.events"
-          :key="location.id"
-          :value="location.id"
-          :label="showSelectLocationLabel(location)"
-          @click="setCurrentLocation(location)"
-        >
-          {{ showSelectLocationLabel(location) }}
-        </el-option>
-      </el-select>
-
-      <el-radio-group class="select-stage" :disabled="loadingLeaderboard" v-model="currentStageID">
-        <el-tooltip :content="pageI18n(`leaderboard.prompt.scrollWheelToMove`)" effect="light">
-          <el-scrollbar ref="scrollbarRef" @mousewheel="handleWheel" @scroll="handleScroll">
-            <div class="scrollbar-container">
-              <el-radio-button
-                v-for="(stage, index) in currentLocation?.stages"
-                :value="stage.id"
-                :key="stage.id"
-                :label="`${index + 1} - ${showSelectStageLabel(stage)}`"
-                @click="setCurrentStage(stage)"
-              >
-                {{ `${index + 1} - ${showSelectStageLabel(stage)} - ${stage.stageSettings.distance}km` }}
-              </el-radio-button>
+    <el-tabs model-value="clubDetail">
+      <!--club detail-->
+      <el-tab-pane name="clubDetail" :label="pageI18n('select.clubDetail')">
+        <div class="page-container club-info-container" v-loading="loadingClubDetail">
+          <h2 class="title">{{ pageI18n('title.clubInfo') }}</h2>
+          <div class="club-info">
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.clubName') }}</el-text>
+              <el-text class="font-bold">{{ clubDetail?.clubName }}</el-text>
+              <el-button v-if="clubDetail?.role === Role.NO_JOIN" style="margin-left: 10px" type="primary" link @click="join(clubId)">加入</el-button>
             </div>
-          </el-scrollbar>
-        </el-tooltip>
-      </el-radio-group>
-
-      <el-select v-model="currentSelectShow" :disabled="loadingLeaderboard">
-        <el-option
-          v-for="option in selectShowOptions"
-          :label="pageI18n(`leaderboard.selectShowOptions.${option}`)"
-          :key="option"
-          :value="option"
-          :disabled="option === currentSelectShow"
-        >
-          <div v-if="option !== selectShowOptions.stageLeaderboard">
-            <el-tooltip effect="light" :content="pageI18n(`leaderboard.prompt.onlyLoaded`)">
-              <div>
-                {{ pageI18n(`leaderboard.selectShowOptions.${option}`) }}
-              </div>
-            </el-tooltip>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.clubID') }}</el-text>
+              <el-text>{{ clubDetail?.clubID }}</el-text>
+            </div>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.ownerName') }}</el-text>
+              <el-text>{{ clubDetail?.ownerDisplayName }}</el-text>
+            </div>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.accessLevel') }}</el-text>
+              <el-text>{{ accessLevels[clubDetail?.accessLevel || ''] }}</el-text>
+            </div>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.description') }}</el-text>
+              <el-tooltip effect="light" :content="pageI18n('clubInfo.prompt.clickToViewDescription')">
+                <el-button link class="nowrap-hidden" @click="showClubDescriptionDialog(clubDetail?.clubDescription || '')">{{
+                  clubDetail?.clubDescription
+                }}</el-button>
+              </el-tooltip>
+            </div>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.count') }}</el-text>
+              <el-text>{{ clubDetail?.activeMemberCount }}</el-text>
+            </div>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.like') }}</el-text>
+              <el-text>{{ clubDetail?.likeCount }}</el-text>
+            </div>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.dislike') }}</el-text>
+              <el-text>{{ clubDetail?.dislikeCount }}</el-text>
+            </div>
+            <div class="info-item">
+              <el-text class="label">{{ pageI18n('clubInfo.label.createDate') }}</el-text>
+              <el-text>{{ dayjs(clubDetail?.clubCreatedAt).format('YYYY-MM-DD HH:mm:ss') }}</el-text>
+            </div>
           </div>
-        </el-option>
-      </el-select>
-
-      <div v-show="currentSelectShow === selectShowOptions.stageLeaderboard">
-        <el-table :data="currentStageFilteredLeaderBoard" :height="tableHeight" :row-style="getTableRowStyle" v-loading="loadingLeaderboard">
-          <el-table-column prop="rank" :label="pageI18n(`leaderboard.columnName.rank`)" width="60" fixed="left" />
-          <el-table-column prop="displayName" :label="pageI18n(`leaderboard.columnName.name`)">
-            <template #header>
-              <div style="display: flex; flex-direction: row; align-items: center">
-                <span style="white-space: nowrap; margin-right: 5px">{{ pageI18n(`leaderboard.columnName.name`) }}</span>
-                <el-input size="small" v-model="searchDisplayName" placeholder="search"></el-input>
+          <h2 class="title">{{ pageI18n('title.championship') }}</h2>
+          <div class="championship-info" v-show="clubChampionshipIDs.length > 0" v-loading="loadingChampionship">
+            <el-select :disabled="loadingChampionship" v-model="currentChampionshipID">
+              <el-option
+                v-for="(id, index) in clubChampionshipIDs"
+                :value="id"
+                :key="id"
+                :label="`championship${index + 1}`"
+                @click="loadChampionship(id)"
+              >
+                championship {{ index + 1 }}
+              </el-option>
+            </el-select>
+            <div class="settings">
+              <div class="setting-item">
+                <el-text class="label">{{ pageI18n('championship.label.name') }}</el-text>
+                <el-text>{{ currentChampionship?.settings.name }}</el-text>
               </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="time" :label="pageI18n(`leaderboard.columnName.time`)">
-            <template #default="scope">
-              {{ scope.row?.time?.substring(0, 12) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="differenceToFirst" :label="pageI18n(`leaderboard.columnName.differenceToFirst`)">
-            <template #default="scope">
-              {{ scope.row?.differenceToFirst?.substring(0, 12) }}
-            </template>
-          </el-table-column>
-          <el-table-column width="90" fixed="right">
-            <template #default="scope">
-              <el-button type="success" @click="analysis(scope.row)">{{ pageI18n(`leaderboard.rowOperation.analysis`) }}</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+              <div class="setting-item">
+                <el-text class="label">{{ pageI18n('championship.label.isHardcoreDamageEnabled') }}</el-text>
+                <el-text>{{
+                  currentChampionship?.settings.isHardcoreDamageEnabled
+                    ? pageI18n('championship.isHardcoreDamageEnabled.true')
+                    : pageI18n('championship.isHardcoreDamageEnabled.false')
+                }}</el-text>
+              </div>
+              <div class="setting-item">
+                <el-text class="label">{{ pageI18n('championship.label.isAssistsAllowed') }}</el-text>
+                <el-text>{{
+                  currentChampionship?.settings.isAssistsAllowed
+                    ? pageI18n('championship.isAssistsAllowed.true')
+                    : pageI18n('championship.isAssistsAllowed.false')
+                }}</el-text>
+              </div>
+              <div class="setting-item">
+                <el-text class="label">{{ pageI18n('championship.label.isTuningAllowed') }}</el-text>
+                <el-text>{{
+                  currentChampionship?.settings.isTuningAllowed
+                    ? pageI18n('championship.isTuningAllowed.true')
+                    : pageI18n('championship.isTuningAllowed.false')
+                }}</el-text>
+              </div>
+            </div>
+          </div>
+        </div>
+      </el-tab-pane>
 
-      <div v-show="currentSelectShow === selectShowOptions.locationTotalTimeLeaderboard">
-        <el-table
-          v-loading="loadingLeaderboard"
-          v-model:data="currentLocationTotalTimeLeaderBoard"
-          :height="tableHeight"
-          :row-style="getTableRowStyle"
-        >
-          <el-table-column prop="rank" :label="pageI18n(`leaderboard.columnName.rank`)" width="60" />
-          <el-table-column prop="displayName" :label="pageI18n(`leaderboard.columnName.name`)" />
-          <el-table-column prop="totalTime" :label="pageI18n(`leaderboard.columnName.time`)">
-            <template #default="scope">
-              {{ formatNumberToTime(scope.row.totalTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="differenceToFirst" :label="pageI18n(`leaderboard.columnName.differenceToFirst`)">
-            <template #default="scope">
-              {{ formatNumberToTime(scope.row.differenceToFirst) }}
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+      <!--leaderboard-->
+      <el-tab-pane name="leaderboard" :label="pageI18n('select.leaderboard')">
+        <div class="page-container">
+          <!--select location-->
+          <el-select :disabled="loadingLeaderboard" v-model="currentLocation" value-key="id">
+            <el-option
+              v-for="location in currentChampionshipLocations"
+              :key="location.id"
+              :value="location"
+              :label="getLocationSelectLabel(location)"
+              @click="setCurrentLocation(location)"
+            >
+              {{ getLocationSelectLabel(location) }}
+            </el-option>
+          </el-select>
 
-      <div v-show="currentSelectShow === selectShowOptions.locationFinishedStageCount">
-        <el-tooltip effect="light">
-          <template #content>
-            <el-button link @click="saveFinishedStageCountAsExcel">
-              {{ pageI18n('leaderboard.prompt.exportAsExcel') }}
-            </el-button>
-          </template>
-          <el-table
-            v-loading="loadingLeaderboard"
-            v-model:data="currentLocationFinishedStageCount"
-            :height="tableHeight"
-            :row-style="getTableRowStyle"
-          >
-            <el-table-column prop="displayName" :label="pageI18n(`leaderboard.columnName.name`)" />
-            <el-table-column prop="count" sortable :label="pageI18n(`leaderboard.columnName.finishedStageCount`)" />
-          </el-table>
-        </el-tooltip>
-      </div>
-    </div>
+          <!--select stage-->
+          <el-radio-group class="select-stage" :disabled="loadingLeaderboard" v-model="currentStageID">
+            <el-tooltip :content="pageI18n(`leaderboard.prompt.scrollWheelToMove`)" effect="light">
+              <el-scrollbar ref="scrollbarRef" @mousewheel="handleWheel" @scroll="handleScroll">
+                <div class="scrollbar-container">
+                  <el-radio-button
+                    v-for="(stage, index) in currentLocationStages"
+                    :value="stage.id"
+                    :key="stage.id"
+                    :label="`${index + 1} - ${getStageSelectLabel(stage)}`"
+                    @click="setCurrentStage(stage)"
+                  >
+                    <el-text v-show="stage.entries && currentStage?.id !== stage.id" type="success">
+                      {{ `${index + 1} - ${getStageSelectLabel(stage)} - ${stage.stageSettings.distance}km` }}
+                    </el-text>
+                    <div v-show="!(stage.entries && currentStage?.id !== stage.id)">
+                      {{ `${index + 1} - ${getStageSelectLabel(stage)} - ${stage.stageSettings.distance}km` }}
+                    </div>
+                  </el-radio-button>
+                </div>
+              </el-scrollbar>
+            </el-tooltip>
+          </el-radio-group>
+
+          <el-tabs model-value="stageLeaderboard">
+            <!--stageLeaderboard-->
+            <el-tab-pane name="stageLeaderboard" :label="pageI18n('leaderboard.selectShowOptions.stageLeaderboard')">
+              <el-table
+                :data="currentStageFilteredLeaderBoard"
+                :height="tableHeight"
+                :row-style="(d: any) => getTableRowStyle((d.row as LeaderboardItem).ssid)"
+                v-loading="loadingLeaderboard"
+              >
+                <el-table-column prop="rank" :label="pageI18n(`leaderboard.columnName.rank`)" width="60" fixed="left" />
+                <el-table-column prop="displayName" :label="pageI18n(`leaderboard.columnName.name`)">
+                  <template #header>
+                    <div style="display: flex; flex-direction: row; align-items: center">
+                      <span style="white-space: nowrap; margin-right: 5px">{{ pageI18n(`leaderboard.columnName.name`) }}</span>
+                      <el-input size="small" v-model="searchDisplayName" placeholder="search"></el-input>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="time" :label="pageI18n(`leaderboard.columnName.time`)">
+                  <template #default="scope">
+                    {{ scope.row?.time?.substring(0, 12) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="differenceToFirst" :label="pageI18n(`leaderboard.columnName.differenceToFirst`)">
+                  <template #default="scope: { row: LeaderboardItem }">
+                    {{ scope.row.differenceToFirst.substring(0, 12) }}
+                  </template>
+                </el-table-column>
+                <el-table-column width="90" fixed="right">
+                  <template #default="scope">
+                    <el-button type="success" @click="analysis(scope.row)">{{ pageI18n(`leaderboard.rowOperation.analysis`) }}</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+
+            <!--all leaderboard-->
+            <el-tab-pane name="allLeaderboard" :label="'全部排行榜'">
+              <div style="width: calc(100vw - 155px)">
+                <el-tooltip placement="top" effect="light">
+                  <template #content>
+                    <el-text type="danger" @click="saveAllLeaderboardAsExcel">点击导出为Excel</el-text>
+                  </template>
+
+                  <el-table
+                    :data="allLeaderboardList"
+                    :height="tableHeight"
+                    :row-style="(d: any) => getTableRowStyle((d.row as AllLeaderboardItem).ssid)"
+                    v-loading="loadingLeaderboard"
+                  >
+                    <el-table-column
+                      prop="displayName"
+                      :label="pageI18n(`leaderboard.columnName.name`)"
+                      fixed="left"
+                      width="150"
+                      show-overflow-tooltip
+                    >
+                      <!--<template #header>-->
+                      <!--  <div style="display: flex; flex-direction: row; align-items: center">-->
+                      <!--    <span style="white-space: nowrap; margin-right: 5px">{{ pageI18n(`leaderboard.columnName.name`) }}</span>-->
+                      <!--    <el-input size="small" v-model="searchDisplayName" placeholder="search"></el-input>-->
+                      <!--  </div>-->
+                      <!--</template>-->
+                    </el-table-column>
+                    <el-table-column prop="rank" :label="pageI18n(`leaderboard.columnName.rank`)" width="60" align="center" />
+                    <el-table-column prop="finishedStageCount" :label="'有效赛段'" width="60" align="center" />
+                    <el-table-column prop="totalTime" :label="pageI18n(`leaderboard.columnName.time`)" width="120" align="center">
+                      <template #default="{ row }: { row: AllLeaderboardItem }">
+                        {{ formatNumberToTime(row.totalTime) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column
+                      prop="differenceToFirst"
+                      :label="pageI18n(`leaderboard.columnName.differenceToFirst`)"
+                      width="120"
+                      align="center"
+                    >
+                      <template #default="{ row }: { row: AllLeaderboardItem }">
+                        {{ formatNumberToTime(row.differenceToFirst) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column v-for="i in currentLocationStages.length" :key="i" :label="`s${i}`" width="110" align="center">
+                      <template #default="{ row }: { row: AllLeaderboardItem }">
+                        <div v-if="row.stageLeaderboard[i - 1]">{{ formatNumberToTime(parseTimeToNumber(row.stageLeaderboard[i - 1]!.time)) }}</div>
+                        <div v-else-if="row.stageLeaderboard[i - 1] === null"></div>
+                        <el-text v-else type="danger">{{ formatNumberToTime(getStageTimeOnNoData(currentLocationStages[i - 1])) }}</el-text>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                </el-tooltip>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -699,7 +730,7 @@ const join = (clubId: string) => {
   }
 
   .select-stage {
-    width: calc(100vw - 130px);
+    width: calc(100vw - 155px);
 
     .scrollbar-container {
       display: flex;

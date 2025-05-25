@@ -116,7 +116,7 @@ export const clubDetail = (clubId: string) => {
     })
 }
 
-export const stageLeaderboard = ({
+export const stageLeaderboardApi = ({
   clubId,
   stageLeaderboardID,
   SortCumulative,
