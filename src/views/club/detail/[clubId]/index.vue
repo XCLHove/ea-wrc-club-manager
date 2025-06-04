@@ -296,8 +296,8 @@ const loadStageLeaderboard = async () => {
   // 避免记录重复
   const entryMap = new Map<string, LeaderboardItem>()
   newStageLeaderBoard = newStageLeaderBoard.filter((item) => {
-    if (entryMap.has(item.wrcPlayerId)) return false
-    entryMap.set(item.wrcPlayerId, item)
+    if (entryMap.has(item.ssid)) return false
+    entryMap.set(item.ssid, item)
     return true
   })
   currentStageLeaderBoard.value = newStageLeaderBoard
