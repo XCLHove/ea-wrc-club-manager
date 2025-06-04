@@ -238,7 +238,14 @@ const updateAllLeaderboardList = (leaderboard: LeaderboardItem[]) => {
 
   // 计算排名
   newAllLeaderboardList = newAllLeaderboardList.sort((a, b) => {
-    let r = a.totalTime - b.totalTime
+    let r = 0
+
+    // 按完善赛段数降序排序
+    r = b.finishedStageCount - a.finishedStageCount
+    if (r !== 0) return r
+
+    // 按总时间升序排序
+    r = a.totalTime - b.totalTime
     return r
   })
   newAllLeaderboardList.forEach((item, index) => {
@@ -645,8 +652,7 @@ const saveAllLeaderboardAsExcel = () => {
                     <el-table-column v-for="i in currentLocationStages.length" :key="i" :label="`s${i}`" width="110" align="center">
                       <template #default="{ row }: { row: AllLeaderboardItem }">
                         <div v-if="row.stageLeaderboard[i - 1]">{{ formatNumberToTime(parseTimeToNumber(row.stageLeaderboard[i - 1]!.time)) }}</div>
-                        <div v-else-if="row.stageLeaderboard[i - 1] === null"></div>
-                        <el-text v-else type="danger">{{ formatNumberToTime(getStageTimeOnNoData(currentLocationStages[i - 1])) }}</el-text>
+                        <div v-else></div>
                       </template>
                     </el-table-column>
                   </el-table>
