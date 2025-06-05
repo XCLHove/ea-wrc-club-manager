@@ -15,6 +15,7 @@ import { LeaderboardItem } from '@/interfaces/ChampionshipStageLeaderboard'
 import { elPrompt } from '@/utils/elPrompt'
 import { exportToExcel, exportToExcelV2, Row } from '@/utils/exportToExcel'
 import Analysis from '@/components/Analysis.vue'
+import * as XLSX from 'xlsx'
 
 const pageI18n = (name: string) => {
   return i18nUtil('app.page.clubDetail', name)
@@ -414,8 +415,7 @@ const saveAllLeaderboardAsExcel = () => {
     })
     allLeaderboardItem.stageLeaderboard.forEach((stageLeaderboardItem, index) => {
       if (stageLeaderboardItem === null) return
-      let value = stageLeaderboardItem?.time.substring(0, 12)
-      value ||= formatNumberToTime(getStageTimeOnNoData(currentLocationStages.value[index]))
+      const value = stageLeaderboardItem?.time.substring(0, 12) || ''
       row.push({
         name: `SS${index + 1}`,
         value: value,
