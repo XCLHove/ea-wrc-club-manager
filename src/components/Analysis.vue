@@ -300,7 +300,7 @@ const analysisBrakeAndThrottle = (() => {
     })
 
     histogramDataGenerator.push({
-      name: '油门效率',
+      name: '平均油门开度',
       valueGetter: () => (throttleTotal / (throttleCount * 100)) * 100,
       formatter: (value) => `${value.toFixed(2)}%`,
     })
@@ -312,7 +312,7 @@ const analysisBrakeAndThrottle = (() => {
     })
 
     histogramDataGenerator.push({
-      name: '刹车力度',
+      name: '平均刹车力度',
       valueGetter: () => (brakeTotal / (brakeCount * 100)) * 100,
       formatter: (value) => `${value.toFixed(2)}%`,
     })
