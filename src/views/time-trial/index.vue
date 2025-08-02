@@ -45,19 +45,19 @@ const setCurrentLocation = (location: OrderedLocation) => {
   currentLocationID.value = location.id
 
   currentLocationStages.value = []
-  statsValues.value?.locationRoute[location.id].forEach((i) => {
+  statsValues.value!.locationRoute[location.id].forEach((i) => {
     currentLocationStages.value.push({
       id: i,
-      value: statsValues.value?.routes[i],
+      value: statsValues.value!.routes[i],
     })
   })
   setCurrentStage(currentLocationStages.value[0])
 }
 
-let currentStage: TypeStage = null
-let currentLocation: OrderedLocation = null
-let currentVehicleClass: OrderedVehicleClass = null
-let currentSurfaceCondition: TypeSurfaceCondition = null
+let currentStage: TypeStage
+let currentLocation: OrderedLocation
+let currentVehicleClass: OrderedVehicleClass
+let currentSurfaceCondition: TypeSurfaceCondition
 const setCurrentStage = (stage: TypeStage) => {
   currentStage = stage
   params.value.stageID = stage.id
@@ -73,12 +73,12 @@ const setCurrentSurfaceCondition = (surfaceCondition: TypeSurfaceCondition) => {
 
 const leaderboard = ref<TimeTrialStageLeaderboard>({
   totalEntrantCount: 0,
-})
+} as TimeTrialStageLeaderboard)
 const params = ref<Parameters<typeof timeTrialLeaderBoard>[0]>({
   stageID: '',
   surfaceConditionID: '',
   vehicleClassID: '',
-  platform: `${Platform.CROSS_PLATFORM}`,
+  platform: Platform.CROSS_PLATFORM.toString() as any,
   cursor: undefined,
   focusOnMe: false,
   maxResultCount: 20,
@@ -137,24 +137,33 @@ watch(
 )
 
 const analysis = (item: TimeTrialEntry) => {
-  analysisData.value.leaderboardId = item.leaderboardId
-  analysisData.value.playerId = item.wrcPlayerId
-  analysisData.value.location = i18nUtil('wrc.location', currentLocation.value)
-  analysisData.value.location += ' - '
-  analysisData.value.location += i18nUtil('wrc.vehicleClass', currentVehicleClass.value)
-  analysisData.value.stage = i18nUtil('wrc.stage', currentStage.value)
-  analysisData.value.stage += ' - '
-  analysisData.value.stage += i18nUtil('wrc.surfaceCondition', currentSurfaceCondition.value)
-  analysisData.value.car = item.vehicle
+  let location = i18nUtil('wrc.location', currentLocation.value)
+  location += ' - '
+  location += i18nUtil('wrc.vehicleClass', currentVehicleClass.value)
 
+  let stage = i18nUtil('wrc.stage', currentStage.value)
+  stage += ' - '
+  stage += i18nUtil('wrc.surfaceCondition', currentSurfaceCondition.value)
+
+  analysisData.value = {
+    leaderboardId: item.leaderboardId as string,
+    playerId: item.wrcPlayerId as string,
+    displayName: item.displayName,
+    location: location,
+    stage: stage,
+    car: item.vehicle,
+    distance: 0,
+  }
   visibleAnalysis.value = true
 }
 const analysisData = ref({
   leaderboardId: '',
   playerId: '',
+  displayName: '',
   location: '',
   stage: '',
   car: '',
+  distance: 0,
 })
 const visibleAnalysis = ref(false)
 </script>
@@ -213,7 +222,7 @@ const visibleAnalysis = ref(false)
           <el-text style="display: flex; justify-content: center">{{ pageI18n('selectHeader.selectPlatform') }}</el-text>
         </template>
         <div v-for="(platform, key) in platforms">
-          <el-option v-if="Platform.Steam !== parseInt(String(key))" :label="pageI18n(`platform.${platform}`)" :value="key" :key="key"> </el-option>
+          <el-option v-if="Platform.Steam !== key" :label="pageI18n(`platform.${platform}`)" :value="key" :key="key"> </el-option>
         </div>
       </el-select>
     </div>

@@ -154,25 +154,13 @@ export const getChampionship = (championshipID: string) => {
   })
 }
 
-export const performanceAnalysis = (() => {
-  const cache = new Map<string, PerformanceData>()
-
-  return ({ leaderboardId, playerId }: { leaderboardId: string; playerId: string }) => {
-    const cacheId = `${leaderboardId}-${playerId}`
-    if (cache.has(cacheId)) {
-      return Promise.resolve(cache.get(cacheId))
-    }
-
-    return racenetRequest
-      .get('/wrc2023Stats/performanceAnalysis/ghost', {
-        params: {
-          WrcRivalLeaderboardId: leaderboardId,
-          WrcRivalPlayerId: playerId,
-        },
-      })
-      .then(({ data }) => {
-        cache.set(cacheId, data)
-        return data
-      }) as Promise<PerformanceData>
-  }
-})()
+export const performanceAnalysisApi = ({ leaderboardId, playerId }: { leaderboardId: string; playerId: string }) => {
+  return racenetRequest
+    .get('/wrc2023Stats/performanceAnalysis/ghost', {
+      params: {
+        WrcRivalLeaderboardId: leaderboardId,
+        WrcRivalPlayerId: playerId,
+      },
+    })
+    .then(({ data }) => data as PerformanceData)
+}

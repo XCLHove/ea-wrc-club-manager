@@ -354,12 +354,15 @@ const handleScroll = ({ scrollLeft }: { scrollLeft: number }) => {
 }
 
 const analysis = (item: LeaderboardItem) => {
-  analysisData.value.leaderboardId = item.leaderboardId
-  analysisData.value.playerId = item.wrcPlayerId
-  analysisData.value.location = getLocationSelectLabel(currentLocation.value!)
-  analysisData.value.stage = getStageSelectLabel(currentStage.value!)
-  analysisData.value.car = item.vehicle
-  analysisData.value.distance = currentStage.value!.stageSettings.distance
+  analysisData.value = {
+    leaderboardId: item.leaderboardId,
+    playerId: item.wrcPlayerId,
+    location: getLocationSelectLabel(currentLocation.value!),
+    stage: getStageSelectLabel(currentStage.value!),
+    car: item.vehicle,
+    distance: currentStage.value!.stageSettings.distance,
+    displayName: item.displayName,
+  }
 
   visibleAnalysis.value = true
 }
@@ -370,6 +373,7 @@ const analysisData = ref({
   stage: '',
   car: '',
   distance: 0,
+  displayName: '',
 })
 const visibleAnalysis = ref(false)
 
