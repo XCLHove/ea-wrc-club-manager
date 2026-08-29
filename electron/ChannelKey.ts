@@ -11,5 +11,7 @@ const ChannelKey = {
   CANCEL_DOWNLOAD: 'cancel-download',
   AXIOS: 'axios',
   LOGIN_BY_EMAIL: 'login:email',
+  LOGIN_BY_EMAIL_SEND_CODE: 'login:email_send_code',
+  LOGIN_BY_EMAIL_SUBMIT_CODE: 'login:email_submit_code',
 } as const
 export default ChannelKey

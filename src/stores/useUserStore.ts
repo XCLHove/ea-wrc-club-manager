@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import { computed, customRef, h, onMounted, ref, watch, withDirectives } from 'vue'
-import { loginByEmailApi, loginByOfficialWebsiteApi, profileApi, refreshAccessTokenApi } from '@/api/authApi.ts'
+import { loginByEmailApi, loginByEmailSendCodeApi, loginByEmailSubmitCodeApi, loginByOfficialWebsiteApi, profileApi, refreshAccessTokenApi, type EaDeviceCookies } from '@/api/authApi.ts'
 import { User } from '@/interfaces/User.ts'
 import { accessTokenUtil } from '@/utils/accessTokenUtil.ts'
 import localStorageRef from '@/composables/localStorageRef.ts'
 import singletonPromise from '@/utils/singletonPromise.ts'
-import { Action, ElCheckbox, ElForm, ElFormItem, ElInput, ElMessage, ElMessageBox, FormInstance, FormRules, vLoading } from 'element-plus'
+import { Action, ElButton, ElCheckbox, ElForm, ElFormItem, ElInput, ElMessage, ElMessageBox, FormInstance, FormRules, vLoading } from 'element-plus'
 import { refreshTokenUtil } from '@/utils/refreshTokenUtil.ts'
 import { Lock, User as UserIcon } from '@element-plus/icons-vue'
 import gePromise from '@/utils/gePromise.ts'
@@ -42,6 +42,14 @@ export const useUserStore = defineStore('useUserStore', () => {
     }
   })
   const isLogin = computed(() => user.value !== void 0)
+  // EA 设备信任凭证（remid/sid/_nx_mpcid）：登录成功后持久化，邮箱登录时先尝试静默认证免密码免 2FA。
+  // 键为邮箱；官网登录窗口收集到的存于 '_'（任意邮箱的兜底凭证）
+  const eaDeviceCookiesMap = localStorageRef<Record<string, EaDeviceCookies>>({}, 'eaDeviceCookiesMap')
+
+  function saveEaDeviceCookies(email: string, cookies?: EaDeviceCookies) {
+    if (!cookies || !Object.keys(cookies).length) return
+    eaDeviceCookiesMap.value = { ...eaDeviceCookiesMap.value, [email]: cookies }
+  }
 
   watch(
     () => accessToken.value,
@@ -80,6 +88,7 @@ export const useUserStore = defineStore('useUserStore', () => {
           .then((r) => {
             accessToken.value = r.accessToken
             refreshToken.value = r.refreshToken
+            saveEaDeviceCookies('_', r.eaDeviceCookies)
             ElMessage.success('登录成功')
           })
           .catch((e) => {
@@ -101,6 +110,7 @@ export const useUserStore = defineStore('useUserStore', () => {
     const form = ref({
       email: rememberEmail.value,
       password: rememberPassword.value,
+      code: '',
     })
     const formRules: FormRules<typeof form.value> = {
       email: [
@@ -108,9 +118,43 @@ export const useUserStore = defineStore('useUserStore', () => {
         { pattern: /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/, message: '请输入正确的邮箱' },
       ],
       password: [{ required: true, message: '请输入密码' }],
+      code: [{ required: true, message: '请输入验证码' }],
     }
     const formRef = ref<FormInstance>()
     const loading = ref(false)
+    // 是否处于 2FA 双重验证模式（EA 风控触发，需先发送验证码再登录）
+    const is2fa = ref(false)
+    const codeSendLoading = ref(false)
+    const countdown = ref(0)
+    let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+    function startCountdown(seconds = 60) {
+      countdown.value = seconds
+      countdownTimer = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) stopCountdown()
+      }, 1000)
+    }
+    function stopCountdown() {
+      if (countdownTimer) clearInterval(countdownTimer)
+      countdownTimer = null
+      countdown.value = 0
+    }
+    function sendCode() {
+      if (codeSendLoading.value || countdown.value > 0) return
+      codeSendLoading.value = true
+      loginByEmailSendCodeApi()
+        .then(() => {
+          ElMessage.success('验证码已发送，请查收邮箱或短信')
+          startCountdown(60)
+        })
+        .catch((e) => {
+          ElMessage.error(e.message)
+        })
+        .finally(() => {
+          codeSendLoading.value = false
+        })
+    }
 
     watch([() => needRememberEmail.value, () => form.value.email], () => {
       let email = ''
@@ -127,7 +171,7 @@ export const useUserStore = defineStore('useUserStore', () => {
       rememberPassword.value = password
     })
 
-    const { promise: loginPromise, resolve, reject } = gePromise<Awaited<ReturnType<typeof loginByEmailApi>>>()
+    const { promise: loginPromise, resolve, reject } = gePromise<{ accessToken: string; refreshToken: string; eaDeviceCookies?: EaDeviceCookies }>()
     ElMessageBox({
       title: '邮箱登录',
       showCancelButton: true,
@@ -138,24 +182,108 @@ export const useUserStore = defineStore('useUserStore', () => {
       closeOnPressEscape: false,
       closeOnClickModal: false,
       async beforeClose(action, _instance, done) {
-        if (action !== 'confirm') return done()
+        if (action !== 'confirm') {
+          stopCountdown()
+          return done()
+        }
         const valid = await formRef.value!.validate()
         if (!valid) return
         if (loading.value) return
         loading.value = true
-        loginByEmailApi(form.value.email, form.value.password)
-          .then((r) => {
-            resolve(r)
-            done()
-          })
-          .catch((e) => {
-            ElMessage.error(e.message)
-          })
-          .finally(() => {
-            loading.value = false
-          })
+        if (!is2fa.value) {
+          // 静默认证种子：优先用该邮箱的凭证，其次用官网登录窗口收集的通用凭证
+          loginByEmailApi(form.value.email, form.value.password, eaDeviceCookiesMap.value[form.value.email] || eaDeviceCookiesMap.value['_'])
+            .then((r) => {
+              if (r.status === '2fa_required') {
+                // EA 风控要求双重验证：弹窗切换为验证码模式，等待用户发送并输入验证码
+                is2fa.value = true
+                return
+              }
+              if (r.eaDeviceCookies) {
+                eaDeviceCookiesMap.value = { ...eaDeviceCookiesMap.value, [form.value.email]: r.eaDeviceCookies }
+              }
+              stopCountdown()
+              resolve(r)
+              done()
+            })
+            .catch((e) => {
+              ElMessage.error(e.message)
+            })
+            .finally(() => {
+              loading.value = false
+            })
+        } else {
+          loginByEmailSubmitCodeApi(form.value.code)
+            .then((r) => {
+              if (r.eaDeviceCookies) {
+                eaDeviceCookiesMap.value = { ...eaDeviceCookiesMap.value, [form.value.email]: r.eaDeviceCookies }
+              }
+              stopCountdown()
+              resolve(r)
+              done()
+            })
+            .catch((e) => {
+              ElMessage.error(e.message)
+            })
+            .finally(() => {
+              loading.value = false
+            })
+        }
       },
       message: () => {
+        if (is2fa.value) {
+          return withDirectives(
+            h(
+              ElForm,
+              {
+                rules: formRules,
+                model: form.value,
+                ref: (v) => (formRef.value = v as any),
+              },
+              () => [
+                h(
+                  'div',
+                  {
+                    style: {
+                      marginBottom: '12px',
+                      color: 'var(--el-text-color-secondary)',
+                      fontSize: '13px',
+                      lineHeight: 1.5,
+                    },
+                  },
+                  '检测到该账号需要双重验证，请点击“发送验证码”，收到验证码后输入并登录',
+                ),
+                h(
+                  ElFormItem,
+                  { label: '验证码', prop: 'code' },
+                  {
+                    default: () =>
+                      h('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+                        h(ElInput, {
+                          clearable: true,
+                          placeholder: '请输入验证码',
+                          modelValue: form.value.code,
+                          'onUpdate:modelValue': (v) => (form.value.code = v),
+                          prefixIcon: Lock,
+                        }),
+                        h(
+                          ElButton,
+                          {
+                            style: { flexShrink: 0 },
+                            disabled: countdown.value > 0,
+                            loading: codeSendLoading.value,
+                            onClick: sendCode,
+                          },
+                          () => (countdown.value > 0 ? `${countdown.value}s 后重发` : '发送验证码'),
+                        ),
+                      ]),
+                  },
+                ),
+              ],
+            ),
+            [[vLoading, loading.value]],
+          )
+        }
         return withDirectives(
           h(
             ElForm,
@@ -238,6 +366,7 @@ export const useUserStore = defineStore('useUserStore', () => {
         )
       },
     }).catch(() => {
+      stopCountdown()
       reject(new Error('取消登录'))
     })
     return loginPromise

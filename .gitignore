@@ -29,3 +29,8 @@ auto-imports.d.ts
 components.d.ts
 
 /public/update/**
+
+.claude
+.agents
+.playwright
+.playwright-cli
